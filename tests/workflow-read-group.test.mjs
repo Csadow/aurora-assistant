@@ -50,7 +50,7 @@ test('one model turn records both real file reads with separate evidence; genuin
 test('new local tasks group one current line view with a different file read, each with separate evidence',async t=>{
  const view=call('inspect_source_lines',{evidence:'E1',startLine:1,count:60});
  const f=await fixture(t,({root,turn})=>turn===1?{tool_calls:[read(join(root,'a.mjs'))]}:turn===2?{tool_calls:[read(join(root,'b.mjs')),view]}:{tool_calls:[call('ask_user',{question:'Which additional behavior is needed?'})]});
- const w=await f.wait('waiting_input');assert.equal(w.version,33);assert.equal(w.engine,'local');assert.equal(w.calls,3);
+ const w=await f.wait('waiting_input');assert.equal(w.version,34);assert.equal(w.engine,'local');assert.equal(w.calls,3);
  assert.deepEqual(w.operations.map(o=>o.name),['read_system_file','read_system_file','inspect_source_lines','ask_user']);
  const [first,second,inspection]=w.operations;assert(first.status==='completed'&&second.status==='completed'&&inspection.status==='completed');
  assert.equal(second.readGroup.id,inspection.readGroup.id);assert.notEqual(second.id,inspection.id);

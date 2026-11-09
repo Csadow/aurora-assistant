@@ -5,7 +5,7 @@ chat, an editable Markdown memory vault, daily planning, and reviewed actions. A
 local Ollama model can handle chat and tools; optional cloud connections require
 separate setup and an explicit preview before information is sent.
 
-This repository is a source snapshot of desktop **1.154.0**. It does not contain
+This repository is a source snapshot of desktop **1.155.0**. It does not contain
 personal notes, conversations, credentials, model weights, development artifacts,
 or the original machine's Git history. The software is still being developed for
 a single trusted desktop user. It has not been prepared as a general installer.
@@ -21,6 +21,11 @@ a single trusted desktop user. It has not been prepared as a general installer.
 Automated tests cover many safety and recovery rules. They do not establish that
 the local model will complete arbitrary tasks reliably. Cloud services and Google
 Calendar need your own accounts; the app must never be exposed as a network service.
+The current update saves clear workflow questions for the user, carries the answer
+into the remaining plan, and guides local text reads to the file tool. A disposable
+read-only system task completed with the developer's local model; separate project,
+memory-correction, and research tasks still showed failures. The chat and completed
+workflow screens also show less repeated text by default.
 
 ## Run the local web app
 

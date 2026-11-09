@@ -57,7 +57,10 @@ test('repeating the same cached lines still reaches the observation guard',()=>{
 test('only a complete bounded closing question becomes a pause, with the exact text retained',()=>{
  const text="The source adds values.\n```js\nreturn total + used;\n```\nWould you like the subtraction prepared?";
  assert.equal(proseQuestion(text),text);assert.equal(proseQuestion('Which behavior should remain？'),'Which behavior should remain？');
+ const choices='Which file should I read?\n\n- first.txt\n- second.txt';assert.equal(proseQuestion(choices),choices);
+ assert.equal(proseQuestion('Which file should I read?\n\n1. first.txt\n2. second.txt'),'Which file should I read?\n\n1. first.txt\n2. second.txt');
  for(const value of ['',null,'Why? The cause is addition.','```text\nA question inside code?','~~~\nA quoted code question?',('a'.repeat(1000)+'?')])assert.equal(proseQuestion(value),null);
+ assert.equal(proseQuestion('Which file?\nThis paragraph is an answer.'),null);
 });
 
 const call=(name,arguments_)=>({tool_calls:[{function:{name,arguments:arguments_}}]});
@@ -83,7 +86,7 @@ test('real local runner records an oversized inspection as a bounded view',async
  const question='The source value is 1. Should I prepare a correction?';
  const f=await appFixture(t,({path,calls})=>calls===1?call('read_system_file',{path}):calls===2?call('inspect_source_lines',{evidence:'E1',startLine:1,count:60}):{content:question});
  const w=await f.wait('waiting_input'),view=w.operations[1];
- assert.equal(w.version,33);assert.equal(w.calls,3);assert.equal(f.reads,1);assert.equal(view.status,'completed');
+ assert.equal(w.version,34);assert.equal(w.calls,3);assert.equal(f.reads,1);assert.equal(view.status,'completed');
  assert.equal(view.arguments.count,60);assert.equal(view.result.countLimitedTo,40);assert.equal(view.result.requestedCount,60);
  assert.equal(view.result.totalLines,2);assert.equal(view.result.nextLine,null);assert.equal((await f.app.store.list('actions')).length,0);
 });

@@ -20,6 +20,27 @@ const get=async(f,id)=>f.store.get('workflows',id);
 async function waiting(f,id){return until(async()=>{const w=await get(f,id);return !f.workflows.running.has(id)&&w.status==='waiting_approval'?w:false;},'approval');}
 async function approve(f,w){const a=await f.store.get('actions',w.operations.at(-1).action);await f.actions.decide(a.id,'approve',a.digest);return a;}
 
+test('new nonproject workflows pause on an exact prose question without reading or changing files',async t=>{
+  const question='Which of the two files should I read?';
+  const f=await fixture(t,()=>({role:'assistant',content:question}));
+  const started=await f.workflows.start({goal:'Ask which file to read before selecting one.'});
+  const w=await until(async()=>{const current=await get(f,started.id);return current.status==='waiting_input'&&!f.workflows.running.has(started.id)?current:false;},'prose question pause');
+  assert.equal(w.version,34);assert.equal(w.question,question);assert.equal(w.operations.length,1);
+  assert.equal(w.operations[0].name,'ask_user');assert.equal(w.operations[0].questionSource,'model prose');
+  assert.equal((await f.store.list('actions')).length,0);assert.equal(await readFile(f.path,'utf8'),'before');
+  const answer='Use only the second file and do not ask again.',updated=await f.workflows.steer(w.id,answer,w.revision),context=JSON.parse(f.workflows.context(updated));
+  assert.equal(context.answeredQuestions[0].question,question);assert.equal(context.answeredQuestions[0].answer,answer);
+  assert(!context.recentEvidence.some(item=>item.includes(question)));assert.equal(updated.operations.length,1);
+});
+
+test('a missing approval choice remains a real question in a new workflow',async t=>{
+  const question='Which approval record should I inspect?';
+  const f=await fixture(t,()=>({role:'assistant',content:question}));
+  const started=await f.workflows.start({goal:'Ask which approval record to inspect.'});
+  const w=await until(async()=>{const current=await get(f,started.id);return current.status==='waiting_input'&&!f.workflows.running.has(started.id)?current:false;},'missing approval choice');
+  assert.equal(w.question,question);assert.equal(w.operations[0].name,'ask_user');
+});
+
 test('workflow saves reviewed edits, reads them back, checks command output and completes with evidence',async t=>{
   let executions=0;
   const f=await fixture(t,(m,{path,home})=>{
