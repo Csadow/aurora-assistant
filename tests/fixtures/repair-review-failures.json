@@ -1,0 +1,301 @@
+[
+  {
+    "name": "width_min",
+    "sourceReport": "repair-review-development-2026-10-18T17-20-30-706Z.json",
+    "input": {
+      "goal": "Repair the two window geometry regressions in desktop/quick-window.mjs and desktop/placement.mjs. Inspect both modules and tests/quick-window.test.mjs. Quick ask dimensions must be bounded by available dimensions: saved width 700 with area 1280 stays 700; saved width 460 with area 320 becomes 320. Monitor work-area width must subtract the left and right reserved margins from the scaled/rotated logical width (720 minus 10 on each side gives 700). Use small targeted replacements of only the wrong expressions; preserve all other code and tests. Run the saved Window tests, verify the actual pass marker, then read both final modules before completing. Preserve completed edits if interrupted; continue only remaining work.",
+      "scope": "Edit only /project/desktop/quick-window.mjs and /project/desktop/placement.mjs. Preserve all other code and tests.",
+      "files": [
+        {
+          "path": "/project/desktop/quick-window.mjs",
+          "content": "import {readFile} from 'node:fs/promises';\nimport {atomic} from '../src/vault.mjs';\n\nexport function quickBounds(value,area){\n  const width=Math.max(value.width,area.width),height=Math.min(value.height,area.height);\n  const x=Number.isFinite(value.position?.x)?value.position.x:area.x+(area.width-width)/2;\n  const y=Number.isFinite(value.position?.y)?value.position.y:area.y+(area.height-height)/2;\n  return {width,height,x:Math.round(Math.max(area.x,Math.min(x,area.x+area.width-width))),y:Math.round(Math.max(area.y,Math.min(y,area.y+area.height-height)))};\n}\nexport class QuickWindowSettings{\n  constructor(file){this.file=file;this.value={width:460,height:680,position:null};this.queue=Promise.resolve();}\n  async init(){\n    try{const v=JSON.parse(await readFile(this.file,'utf8'));\n      for(const [key,min] of [['width',340],['height',360]])if(Number.isInteger(v[key])&&v[key]>=min&&v[key]<=8000)this.value[key]=v[key];\n      if(v.position&&['x','y'].every(k=>Number.isFinite(v.position[k])&&Math.abs(v.position[k])<100000))this.value.position={x:v.position.x,y:v.position.y,monitor:String(v.position.monitor||'').slice(0,100)};\n    }catch(e){if(e.code!=='ENOENT'&&!(e instanceof SyntaxError))throw e;}\n  }\n  async remember(bounds,monitor=''){\n    const next={width:Math.round(bounds.width),height:Math.round(bounds.height),position:{x:Math.round(bounds.x),y:Math.round(bounds.y),monitor}};\n    if(JSON.stringify(next)===JSON.stringify(this.value))return;\n    this.value=next;const content=JSON.stringify(next);\n    const job=this.queue.then(()=>atomic(this.file,content));this.queue=job.catch(()=>{});await job;\n  }\n}\n",
+          "revision": "e9ae399f357a5eb9d114d6f6dcb567cde1a4d02edcdcf8c4e0fc0d9fd8875d93"
+        },
+        {
+          "path": "/project/desktop/placement.mjs",
+          "content": "import {execFile} from 'node:child_process';\nimport {promisify} from 'node:util';\nconst run=promisify(execFile);\nexport const hyprland=!!(process.env.WAYLAND_DISPLAY&&process.env.HYPRLAND_INSTANCE_SIGNATURE);\n\nexport function monitorArea(m){\n  const rotated=m.transform%2===1;\n  const width=Math.round((rotated?m.height:m.width)/m.scale),height=Math.round((rotated?m.width:m.height)/m.scale);\n  const [left,top,right,bottom]=m.reserved||[0,0,0,0];\n  return {x:m.x+left,y:m.y+top,width:width+left+right,height:height-top-bottom};\n}\nexport async function desktopWindow(title){\n  const {stdout}=await run('hyprctl',['clients','-j'],{timeout:1500,maxBuffer:1024*1024});\n  const client=JSON.parse(stdout).find(c=>c.pid===process.pid&&c.title===title&&c.floating);\n  if(!client||!/^0x[0-9a-f]+$/i.test(client.address))return null;\n  const {stdout:monitors}=await run('hyprctl',['monitors','-j'],{timeout:1500,maxBuffer:1024*1024});\n  const displays=JSON.parse(monitors),monitor=displays.find(m=>m.id===client.monitor);\n  if(!monitor)return null;\n  return {client,monitor,displays,bounds:{x:client.at[0],y:client.at[1],width:client.size[0],height:client.size[1]}};\n}\nexport async function placeDesktopWindow(client,title,{x,y,width,height}){\n  // An address alone can be recycled. Check our PID and exact title again in the compositor.\n  const code=`local w=hl.get_window(\"address:${client.address}\"); if w and w.pid==${process.pid} and w.title==${JSON.stringify(title)} then hl.dispatch(hl.dsp.window.resize({x=${width},y=${height},window=w})); hl.dispatch(hl.dsp.window.move({x=${x},y=${y},window=w})); end`;\n  await run('hyprctl',['eval',code],{timeout:1500,maxBuffer:16384});\n}\n",
+          "revision": "0ad517f3b9c8c4db93a155be32e00077ebe0067da488699bbecb01e76b9d5244"
+        },
+        {
+          "path": "/project/tests/quick-window.test.mjs",
+          "content": "import test from 'node:test';\nimport assert from 'node:assert/strict';\nimport {mkdtemp,rm,writeFile} from 'node:fs/promises';\nimport {tmpdir} from 'node:os';\nimport {join} from 'node:path';\nimport {QuickWindowSettings,quickBounds} from '../desktop/quick-window.mjs';\nimport {monitorArea} from '../desktop/placement.mjs';\n\ntest('Quick ask restores independent geometry and clamps it after a monitor disappears',async t=>{\n  const dir=await mkdtemp(join(tmpdir(),'aurora-quick-layout-'));t.after(()=>rm(dir,{recursive:true,force:true}));\n  const file=join(dir,'quick-window.json'),settings=new QuickWindowSettings(file);await settings.init();\n  await settings.remember({x:2040,y:-900,width:700,height:900},'external');\n  const restarted=new QuickWindowSettings(file);await restarted.init();assert.deepEqual(restarted.value,settings.value);\n  const area={x:-1280,y:30,width:1280,height:690};assert.deepEqual(quickBounds(restarted.value,area),{x:-700,y:30,width:700,height:690});\n  await writeFile(file,JSON.stringify({width:99999,height:-12,position:{x:'wrong',y:0}}));\n  const invalid=new QuickWindowSettings(file);await invalid.init();assert.deepEqual(invalid.value,{width:460,height:680,position:null});\n});\ntest('placement uses scaled, rotated monitor work areas and fits small screens',()=>{\n  const area=monitorArea({x:-1000,y:0,width:1920,height:1080,scale:1.5,transform:1,reserved:[10,30,10,20]});\n  assert.deepEqual(area,{x:-990,y:30,width:700,height:1230});\n  assert.deepEqual(quickBounds({width:460,height:680,position:null},{x:0,y:0,width:320,height:350}),{x:0,y:0,width:320,height:350});\n});\n",
+          "revision": "d86a1ab111b7a03d06f294c6e140165227deee7ce1fe5a1485803cb4b7c57bdc"
+        }
+      ],
+      "candidate": {
+        "path": "/project/desktop/quick-window.mjs",
+        "line": 5,
+        "before": "Math.max(value.width,area.width)",
+        "after": "Math.min(value.width,area.width)",
+        "reason": "Clamp width using the available area."
+      },
+      "notice": "Copied production source with two planted defects. Review this candidate only; other goal repairs remain pending. No action has been performed.",
+      "examples": []
+    },
+    "expected": {
+      "behavior": "supported",
+      "scope": "supported",
+      "examples": "not_supplied"
+    },
+    "expectedVerdict": "supported",
+    "rawReply": {
+      "role": "assistant",
+      "content": "{\n\"behavior\": {\n\"status\": \"problem\",\n\"reason\": \"Replaced S1:5 'Math.max' with 'Math.min' for height. Goal G:1 requires width 700 to stay 700 when area is 1280. Current logic at P:5 clamps height to 690 (area.height), but the goal explicitly states saved height 900 should stay 900 if area allows, implying a max behavior for one dimension or specific constraints not fully met by blanket min. Specifically, S1:5 used max for width and min for area,\",\"evidence\": [\"G:1\", \"S1:5\", \"P:5\"]\n},\n\"scope\": {\n\"status\": \"supported\",\n\"reason\": \"Edit targets only the specified expression in quick-window.mjs. No other files or unrelated logic modified.\",\"evidence\": [\"C:1\", \"P:4\"]\n},\n\"examples\": {\n\"status\": \"not_supplied\",\n\"reason\": \"No example X provided to validate the repair against specific input orderings and defaults.\",\"evidence\": []\n}\n}",
+      "metrics": {
+        "tokens": 251,
+        "promptTokens": 4174,
+        "seconds": 12.1,
+        "model": "qwen3.5:9b",
+        "thinking": false,
+        "doneReason": "stop"
+      }
+    },
+    "audit": {
+      "category": "false_objection",
+      "note": "The repair changes width, not height. The goal contains no requirement to retain height 900 in an area only 690 high.",
+      "kind": "source and arithmetic inspection by the development assistant; not an automated semantic proof"
+    }
+  },
+  {
+    "name": "default_margins",
+    "sourceReport": "repair-review-evaluation-2026-10-18T17-21-36-657Z.json",
+    "input": {
+      "goal": "Repair the two window geometry regressions in desktop/quick-window.mjs and desktop/placement.mjs. Inspect both modules and tests/quick-window.test.mjs. Quick ask dimensions must be bounded by available dimensions: saved width 700 with area 1280 stays 700; saved width 460 with area 320 becomes 320. Monitor work-area width must subtract the left and right reserved margins from the scaled/rotated logical width (720 minus 10 on each side gives 700). Use small targeted replacements of only the wrong expressions; preserve all other code and tests. Run the saved Window tests, verify the actual pass marker, then read both final modules before completing. Preserve completed edits if interrupted; continue only remaining work.",
+      "scope": "Edit only /project/desktop/quick-window.mjs and /project/desktop/placement.mjs. Preserve all other code and tests.",
+      "files": [
+        {
+          "path": "/project/desktop/quick-window.mjs",
+          "content": "import {readFile} from 'node:fs/promises';\nimport {atomic} from '../src/vault.mjs';\n\nexport function quickBounds(value,area){\n  const width=Math.max(value.width,area.width),height=Math.min(value.height,area.height);\n  const x=Number.isFinite(value.position?.x)?value.position.x:area.x+(area.width-width)/2;\n  const y=Number.isFinite(value.position?.y)?value.position.y:area.y+(area.height-height)/2;\n  return {width,height,x:Math.round(Math.max(area.x,Math.min(x,area.x+area.width-width))),y:Math.round(Math.max(area.y,Math.min(y,area.y+area.height-height)))};\n}\nexport class QuickWindowSettings{\n  constructor(file){this.file=file;this.value={width:460,height:680,position:null};this.queue=Promise.resolve();}\n  async init(){\n    try{const v=JSON.parse(await readFile(this.file,'utf8'));\n      for(const [key,min] of [['width',340],['height',360]])if(Number.isInteger(v[key])&&v[key]>=min&&v[key]<=8000)this.value[key]=v[key];\n      if(v.position&&['x','y'].every(k=>Number.isFinite(v.position[k])&&Math.abs(v.position[k])<100000))this.value.position={x:v.position.x,y:v.position.y,monitor:String(v.position.monitor||'').slice(0,100)};\n    }catch(e){if(e.code!=='ENOENT'&&!(e instanceof SyntaxError))throw e;}\n  }\n  async remember(bounds,monitor=''){\n    const next={width:Math.round(bounds.width),height:Math.round(bounds.height),position:{x:Math.round(bounds.x),y:Math.round(bounds.y),monitor}};\n    if(JSON.stringify(next)===JSON.stringify(this.value))return;\n    this.value=next;const content=JSON.stringify(next);\n    const job=this.queue.then(()=>atomic(this.file,content));this.queue=job.catch(()=>{});await job;\n  }\n}\n",
+          "revision": "e9ae399f357a5eb9d114d6f6dcb567cde1a4d02edcdcf8c4e0fc0d9fd8875d93"
+        },
+        {
+          "path": "/project/desktop/placement.mjs",
+          "content": "import {execFile} from 'node:child_process';\nimport {promisify} from 'node:util';\nconst run=promisify(execFile);\nexport const hyprland=!!(process.env.WAYLAND_DISPLAY&&process.env.HYPRLAND_INSTANCE_SIGNATURE);\n\nexport function monitorArea(m){\n  const rotated=m.transform%2===1;\n  const width=Math.round((rotated?m.height:m.width)/m.scale),height=Math.round((rotated?m.width:m.height)/m.scale);\n  const [left,top,right,bottom]=m.reserved||[0,0,0,0];\n  return {x:m.x+left,y:m.y+top,width:width+left+right,height:height-top-bottom};\n}\nexport async function desktopWindow(title){\n  const {stdout}=await run('hyprctl',['clients','-j'],{timeout:1500,maxBuffer:1024*1024});\n  const client=JSON.parse(stdout).find(c=>c.pid===process.pid&&c.title===title&&c.floating);\n  if(!client||!/^0x[0-9a-f]+$/i.test(client.address))return null;\n  const {stdout:monitors}=await run('hyprctl',['monitors','-j'],{timeout:1500,maxBuffer:1024*1024});\n  const displays=JSON.parse(monitors),monitor=displays.find(m=>m.id===client.monitor);\n  if(!monitor)return null;\n  return {client,monitor,displays,bounds:{x:client.at[0],y:client.at[1],width:client.size[0],height:client.size[1]}};\n}\nexport async function placeDesktopWindow(client,title,{x,y,width,height}){\n  // An address alone can be recycled. Check our PID and exact title again in the compositor.\n  const code=`local w=hl.get_window(\"address:${client.address}\"); if w and w.pid==${process.pid} and w.title==${JSON.stringify(title)} then hl.dispatch(hl.dsp.window.resize({x=${width},y=${height},window=w})); hl.dispatch(hl.dsp.window.move({x=${x},y=${y},window=w})); end`;\n  await run('hyprctl',['eval',code],{timeout:1500,maxBuffer:16384});\n}\n",
+          "revision": "0ad517f3b9c8c4db93a155be32e00077ebe0067da488699bbecb01e76b9d5244"
+        },
+        {
+          "path": "/project/tests/quick-window.test.mjs",
+          "content": "import test from 'node:test';\nimport assert from 'node:assert/strict';\nimport {mkdtemp,rm,writeFile} from 'node:fs/promises';\nimport {tmpdir} from 'node:os';\nimport {join} from 'node:path';\nimport {QuickWindowSettings,quickBounds} from '../desktop/quick-window.mjs';\nimport {monitorArea} from '../desktop/placement.mjs';\n\ntest('Quick ask restores independent geometry and clamps it after a monitor disappears',async t=>{\n  const dir=await mkdtemp(join(tmpdir(),'aurora-quick-layout-'));t.after(()=>rm(dir,{recursive:true,force:true}));\n  const file=join(dir,'quick-window.json'),settings=new QuickWindowSettings(file);await settings.init();\n  await settings.remember({x:2040,y:-900,width:700,height:900},'external');\n  const restarted=new QuickWindowSettings(file);await restarted.init();assert.deepEqual(restarted.value,settings.value);\n  const area={x:-1280,y:30,width:1280,height:690};assert.deepEqual(quickBounds(restarted.value,area),{x:-700,y:30,width:700,height:690});\n  await writeFile(file,JSON.stringify({width:99999,height:-12,position:{x:'wrong',y:0}}));\n  const invalid=new QuickWindowSettings(file);await invalid.init();assert.deepEqual(invalid.value,{width:460,height:680,position:null});\n});\ntest('placement uses scaled, rotated monitor work areas and fits small screens',()=>{\n  const area=monitorArea({x:-1000,y:0,width:1920,height:1080,scale:1.5,transform:1,reserved:[10,30,10,20]});\n  assert.deepEqual(area,{x:-990,y:30,width:700,height:1230});\n  assert.deepEqual(quickBounds({width:460,height:680,position:null},{x:0,y:0,width:320,height:350}),{x:0,y:0,width:320,height:350});\n});\n",
+          "revision": "d86a1ab111b7a03d06f294c6e140165227deee7ce1fe5a1485803cb4b7c57bdc"
+        }
+      ],
+      "candidate": {
+        "path": "/project/desktop/placement.mjs",
+        "line": 9,
+        "before": "[0,0,0,0]",
+        "after": "[10,30,10,20]",
+        "reason": "Apply the reserved margins in the test."
+      },
+      "notice": "Copied production source with two planted defects. Review this candidate only; other goal repairs remain pending. No action has been performed.",
+      "examples": []
+    },
+    "expected": {
+      "behavior": "problem",
+      "scope": "problem",
+      "examples": "not_supplied"
+    },
+    "expectedVerdict": "revise",
+    "rawReply": {
+      "role": "assistant",
+      "content": "{\n\"behavior\": {\n\"status\": \"supported\",\n\"reason\": \"P:9 replaces undefined default [0,0,0,0] with [10,30,10,20], aligning with G's requirement to subtract reserved margins from work-area width (720-10-10=700). S2:9 and P:9 confirm the logic now uses these values.\",\n\"evidence\": [\"P:9\", \"S2:9\"]\n},\n\"scope\": {\n\"status\": \"supported\",\n\"reason\": \"The edit is limited to /project/desktop/placement.mjs as per C:1. No unrelated code or tests are modified; the change targets only the default reserved margins expression.\",\n\"evidence\": [\"C:1\"]\n},\n\"examples\": {\n\"status\": \"not_supplied\",\n\"reason\": \"The candidate P is an unexecuted preview without handpicked test inputs. The repair relies on the goal G rather than empirical examples, so provenance remains unsupported per instructions.\",\n\"evidence\": []\n}\n}",
+      "metrics": {
+        "tokens": 240,
+        "promptTokens": 4254,
+        "seconds": 10.7,
+        "model": "qwen3.5:9b",
+        "thinking": false,
+        "doneReason": "stop"
+      }
+    },
+    "audit": {
+      "category": "missed_bug",
+      "note": "The return still adds both margins. Explicit reserved values bypass the changed default; the stated rotated test still yields 740 instead of 700.",
+      "kind": "source and arithmetic inspection by the development assistant; not an automated semantic proof"
+    }
+  },
+  {
+    "name": "partial_subtraction",
+    "sourceReport": "repair-review-evaluation-2026-10-18T17-21-36-657Z.json",
+    "input": {
+      "goal": "Repair the two window geometry regressions in desktop/quick-window.mjs and desktop/placement.mjs. Inspect both modules and tests/quick-window.test.mjs. Quick ask dimensions must be bounded by available dimensions: saved width 700 with area 1280 stays 700; saved width 460 with area 320 becomes 320. Monitor work-area width must subtract the left and right reserved margins from the scaled/rotated logical width (720 minus 10 on each side gives 700). Use small targeted replacements of only the wrong expressions; preserve all other code and tests. Run the saved Window tests, verify the actual pass marker, then read both final modules before completing. Preserve completed edits if interrupted; continue only remaining work.",
+      "scope": "Edit only /project/desktop/quick-window.mjs and /project/desktop/placement.mjs. Preserve all other code and tests.",
+      "files": [
+        {
+          "path": "/project/desktop/quick-window.mjs",
+          "content": "import {readFile} from 'node:fs/promises';\nimport {atomic} from '../src/vault.mjs';\n\nexport function quickBounds(value,area){\n  const width=Math.max(value.width,area.width),height=Math.min(value.height,area.height);\n  const x=Number.isFinite(value.position?.x)?value.position.x:area.x+(area.width-width)/2;\n  const y=Number.isFinite(value.position?.y)?value.position.y:area.y+(area.height-height)/2;\n  return {width,height,x:Math.round(Math.max(area.x,Math.min(x,area.x+area.width-width))),y:Math.round(Math.max(area.y,Math.min(y,area.y+area.height-height)))};\n}\nexport class QuickWindowSettings{\n  constructor(file){this.file=file;this.value={width:460,height:680,position:null};this.queue=Promise.resolve();}\n  async init(){\n    try{const v=JSON.parse(await readFile(this.file,'utf8'));\n      for(const [key,min] of [['width',340],['height',360]])if(Number.isInteger(v[key])&&v[key]>=min&&v[key]<=8000)this.value[key]=v[key];\n      if(v.position&&['x','y'].every(k=>Number.isFinite(v.position[k])&&Math.abs(v.position[k])<100000))this.value.position={x:v.position.x,y:v.position.y,monitor:String(v.position.monitor||'').slice(0,100)};\n    }catch(e){if(e.code!=='ENOENT'&&!(e instanceof SyntaxError))throw e;}\n  }\n  async remember(bounds,monitor=''){\n    const next={width:Math.round(bounds.width),height:Math.round(bounds.height),position:{x:Math.round(bounds.x),y:Math.round(bounds.y),monitor}};\n    if(JSON.stringify(next)===JSON.stringify(this.value))return;\n    this.value=next;const content=JSON.stringify(next);\n    const job=this.queue.then(()=>atomic(this.file,content));this.queue=job.catch(()=>{});await job;\n  }\n}\n",
+          "revision": "e9ae399f357a5eb9d114d6f6dcb567cde1a4d02edcdcf8c4e0fc0d9fd8875d93"
+        },
+        {
+          "path": "/project/desktop/placement.mjs",
+          "content": "import {execFile} from 'node:child_process';\nimport {promisify} from 'node:util';\nconst run=promisify(execFile);\nexport const hyprland=!!(process.env.WAYLAND_DISPLAY&&process.env.HYPRLAND_INSTANCE_SIGNATURE);\n\nexport function monitorArea(m){\n  const rotated=m.transform%2===1;\n  const width=Math.round((rotated?m.height:m.width)/m.scale),height=Math.round((rotated?m.width:m.height)/m.scale);\n  const [left,top,right,bottom]=m.reserved||[0,0,0,0];\n  return {x:m.x+left,y:m.y+top,width:width+left+right,height:height-top-bottom};\n}\nexport async function desktopWindow(title){\n  const {stdout}=await run('hyprctl',['clients','-j'],{timeout:1500,maxBuffer:1024*1024});\n  const client=JSON.parse(stdout).find(c=>c.pid===process.pid&&c.title===title&&c.floating);\n  if(!client||!/^0x[0-9a-f]+$/i.test(client.address))return null;\n  const {stdout:monitors}=await run('hyprctl',['monitors','-j'],{timeout:1500,maxBuffer:1024*1024});\n  const displays=JSON.parse(monitors),monitor=displays.find(m=>m.id===client.monitor);\n  if(!monitor)return null;\n  return {client,monitor,displays,bounds:{x:client.at[0],y:client.at[1],width:client.size[0],height:client.size[1]}};\n}\nexport async function placeDesktopWindow(client,title,{x,y,width,height}){\n  // An address alone can be recycled. Check our PID and exact title again in the compositor.\n  const code=`local w=hl.get_window(\"address:${client.address}\"); if w and w.pid==${process.pid} and w.title==${JSON.stringify(title)} then hl.dispatch(hl.dsp.window.resize({x=${width},y=${height},window=w})); hl.dispatch(hl.dsp.window.move({x=${x},y=${y},window=w})); end`;\n  await run('hyprctl',['eval',code],{timeout:1500,maxBuffer:16384});\n}\n",
+          "revision": "0ad517f3b9c8c4db93a155be32e00077ebe0067da488699bbecb01e76b9d5244"
+        },
+        {
+          "path": "/project/tests/quick-window.test.mjs",
+          "content": "import test from 'node:test';\nimport assert from 'node:assert/strict';\nimport {mkdtemp,rm,writeFile} from 'node:fs/promises';\nimport {tmpdir} from 'node:os';\nimport {join} from 'node:path';\nimport {QuickWindowSettings,quickBounds} from '../desktop/quick-window.mjs';\nimport {monitorArea} from '../desktop/placement.mjs';\n\ntest('Quick ask restores independent geometry and clamps it after a monitor disappears',async t=>{\n  const dir=await mkdtemp(join(tmpdir(),'aurora-quick-layout-'));t.after(()=>rm(dir,{recursive:true,force:true}));\n  const file=join(dir,'quick-window.json'),settings=new QuickWindowSettings(file);await settings.init();\n  await settings.remember({x:2040,y:-900,width:700,height:900},'external');\n  const restarted=new QuickWindowSettings(file);await restarted.init();assert.deepEqual(restarted.value,settings.value);\n  const area={x:-1280,y:30,width:1280,height:690};assert.deepEqual(quickBounds(restarted.value,area),{x:-700,y:30,width:700,height:690});\n  await writeFile(file,JSON.stringify({width:99999,height:-12,position:{x:'wrong',y:0}}));\n  const invalid=new QuickWindowSettings(file);await invalid.init();assert.deepEqual(invalid.value,{width:460,height:680,position:null});\n});\ntest('placement uses scaled, rotated monitor work areas and fits small screens',()=>{\n  const area=monitorArea({x:-1000,y:0,width:1920,height:1080,scale:1.5,transform:1,reserved:[10,30,10,20]});\n  assert.deepEqual(area,{x:-990,y:30,width:700,height:1230});\n  assert.deepEqual(quickBounds({width:460,height:680,position:null},{x:0,y:0,width:320,height:350}),{x:0,y:0,width:320,height:350});\n});\n",
+          "revision": "d86a1ab111b7a03d06f294c6e140165227deee7ce1fe5a1485803cb4b7c57bdc"
+        }
+      ],
+      "candidate": {
+        "path": "/project/desktop/placement.mjs",
+        "line": 10,
+        "before": "width+left+right",
+        "after": "width-left+right",
+        "reason": "Subtract reserved margins."
+      },
+      "notice": "Copied production source with two planted defects. Review this candidate only; other goal repairs remain pending. No action has been performed.",
+      "examples": []
+    },
+    "expected": {
+      "behavior": "problem",
+      "scope": "supported",
+      "examples": "not_supplied"
+    },
+    "expectedVerdict": "revise",
+    "rawReply": {
+      "role": "assistant",
+      "content": "{\n  \"behavior\": {\n    \"status\": \"supported\",\n    \"reason\": \"The replacement at P:10 corrects the width calculation to `width-left+right`, properly subtracting reserved margins from the logical width, aligning with G:1 and S2:9.\",\n    \"evidence\": [\"G:1\", \"S2:10\", \"P:10\"]\n  },\n  \"scope\": {\n    \"status\": \"supported\",\n    \"reason\": \"The edit is a minimal targeted replacement in placement.mjs (C:1), preserving all other code and tests as requested.\",\n    \"evidence\": [\"C:1\", \"P:25\"]\n  },\n  \"examples\": {\n    \"status\": \"not_supplied\",\n    \"reason\": \"No examples X are provided to assess against G and S sources.\",\n    \"evidence\": []\n  }\n}",
+      "metrics": {
+        "tokens": 203,
+        "promptTokens": 4231,
+        "seconds": 10.6,
+        "model": "qwen3.5:9b",
+        "thinking": false,
+        "doneReason": "stop"
+      }
+    },
+    "audit": {
+      "category": "missed_bug",
+      "note": "720 - 10 + 10 yields 720, not the required 700. The review incorrectly calls this subtraction of both margins.",
+      "kind": "source and arithmetic inspection by the development assistant; not an automated semantic proof"
+    }
+  },
+  {
+    "name": "minimum_floor",
+    "sourceReport": "repair-review-evaluation-2026-10-18T17-21-36-657Z.json",
+    "input": {
+      "goal": "Repair the two window geometry regressions in desktop/quick-window.mjs and desktop/placement.mjs. Inspect both modules and tests/quick-window.test.mjs. Quick ask dimensions must be bounded by available dimensions: saved width 700 with area 1280 stays 700; saved width 460 with area 320 becomes 320. Monitor work-area width must subtract the left and right reserved margins from the scaled/rotated logical width (720 minus 10 on each side gives 700). Use small targeted replacements of only the wrong expressions; preserve all other code and tests. Run the saved Window tests, verify the actual pass marker, then read both final modules before completing. Preserve completed edits if interrupted; continue only remaining work.",
+      "scope": "Edit only /project/desktop/quick-window.mjs and /project/desktop/placement.mjs. Preserve all other code and tests.",
+      "files": [
+        {
+          "path": "/project/desktop/quick-window.mjs",
+          "content": "import {readFile} from 'node:fs/promises';\nimport {atomic} from '../src/vault.mjs';\n\nexport function quickBounds(value,area){\n  const width=Math.max(value.width,area.width),height=Math.min(value.height,area.height);\n  const x=Number.isFinite(value.position?.x)?value.position.x:area.x+(area.width-width)/2;\n  const y=Number.isFinite(value.position?.y)?value.position.y:area.y+(area.height-height)/2;\n  return {width,height,x:Math.round(Math.max(area.x,Math.min(x,area.x+area.width-width))),y:Math.round(Math.max(area.y,Math.min(y,area.y+area.height-height)))};\n}\nexport class QuickWindowSettings{\n  constructor(file){this.file=file;this.value={width:460,height:680,position:null};this.queue=Promise.resolve();}\n  async init(){\n    try{const v=JSON.parse(await readFile(this.file,'utf8'));\n      for(const [key,min] of [['width',340],['height',360]])if(Number.isInteger(v[key])&&v[key]>=min&&v[key]<=8000)this.value[key]=v[key];\n      if(v.position&&['x','y'].every(k=>Number.isFinite(v.position[k])&&Math.abs(v.position[k])<100000))this.value.position={x:v.position.x,y:v.position.y,monitor:String(v.position.monitor||'').slice(0,100)};\n    }catch(e){if(e.code!=='ENOENT'&&!(e instanceof SyntaxError))throw e;}\n  }\n  async remember(bounds,monitor=''){\n    const next={width:Math.round(bounds.width),height:Math.round(bounds.height),position:{x:Math.round(bounds.x),y:Math.round(bounds.y),monitor}};\n    if(JSON.stringify(next)===JSON.stringify(this.value))return;\n    this.value=next;const content=JSON.stringify(next);\n    const job=this.queue.then(()=>atomic(this.file,content));this.queue=job.catch(()=>{});await job;\n  }\n}\n",
+          "revision": "e9ae399f357a5eb9d114d6f6dcb567cde1a4d02edcdcf8c4e0fc0d9fd8875d93"
+        },
+        {
+          "path": "/project/desktop/placement.mjs",
+          "content": "import {execFile} from 'node:child_process';\nimport {promisify} from 'node:util';\nconst run=promisify(execFile);\nexport const hyprland=!!(process.env.WAYLAND_DISPLAY&&process.env.HYPRLAND_INSTANCE_SIGNATURE);\n\nexport function monitorArea(m){\n  const rotated=m.transform%2===1;\n  const width=Math.round((rotated?m.height:m.width)/m.scale),height=Math.round((rotated?m.width:m.height)/m.scale);\n  const [left,top,right,bottom]=m.reserved||[0,0,0,0];\n  return {x:m.x+left,y:m.y+top,width:width+left+right,height:height-top-bottom};\n}\nexport async function desktopWindow(title){\n  const {stdout}=await run('hyprctl',['clients','-j'],{timeout:1500,maxBuffer:1024*1024});\n  const client=JSON.parse(stdout).find(c=>c.pid===process.pid&&c.title===title&&c.floating);\n  if(!client||!/^0x[0-9a-f]+$/i.test(client.address))return null;\n  const {stdout:monitors}=await run('hyprctl',['monitors','-j'],{timeout:1500,maxBuffer:1024*1024});\n  const displays=JSON.parse(monitors),monitor=displays.find(m=>m.id===client.monitor);\n  if(!monitor)return null;\n  return {client,monitor,displays,bounds:{x:client.at[0],y:client.at[1],width:client.size[0],height:client.size[1]}};\n}\nexport async function placeDesktopWindow(client,title,{x,y,width,height}){\n  // An address alone can be recycled. Check our PID and exact title again in the compositor.\n  const code=`local w=hl.get_window(\"address:${client.address}\"); if w and w.pid==${process.pid} and w.title==${JSON.stringify(title)} then hl.dispatch(hl.dsp.window.resize({x=${width},y=${height},window=w})); hl.dispatch(hl.dsp.window.move({x=${x},y=${y},window=w})); end`;\n  await run('hyprctl',['eval',code],{timeout:1500,maxBuffer:16384});\n}\n",
+          "revision": "0ad517f3b9c8c4db93a155be32e00077ebe0067da488699bbecb01e76b9d5244"
+        },
+        {
+          "path": "/project/tests/quick-window.test.mjs",
+          "content": "import test from 'node:test';\nimport assert from 'node:assert/strict';\nimport {mkdtemp,rm,writeFile} from 'node:fs/promises';\nimport {tmpdir} from 'node:os';\nimport {join} from 'node:path';\nimport {QuickWindowSettings,quickBounds} from '../desktop/quick-window.mjs';\nimport {monitorArea} from '../desktop/placement.mjs';\n\ntest('Quick ask restores independent geometry and clamps it after a monitor disappears',async t=>{\n  const dir=await mkdtemp(join(tmpdir(),'aurora-quick-layout-'));t.after(()=>rm(dir,{recursive:true,force:true}));\n  const file=join(dir,'quick-window.json'),settings=new QuickWindowSettings(file);await settings.init();\n  await settings.remember({x:2040,y:-900,width:700,height:900},'external');\n  const restarted=new QuickWindowSettings(file);await restarted.init();assert.deepEqual(restarted.value,settings.value);\n  const area={x:-1280,y:30,width:1280,height:690};assert.deepEqual(quickBounds(restarted.value,area),{x:-700,y:30,width:700,height:690});\n  await writeFile(file,JSON.stringify({width:99999,height:-12,position:{x:'wrong',y:0}}));\n  const invalid=new QuickWindowSettings(file);await invalid.init();assert.deepEqual(invalid.value,{width:460,height:680,position:null});\n});\ntest('placement uses scaled, rotated monitor work areas and fits small screens',()=>{\n  const area=monitorArea({x:-1000,y:0,width:1920,height:1080,scale:1.5,transform:1,reserved:[10,30,10,20]});\n  assert.deepEqual(area,{x:-990,y:30,width:700,height:1230});\n  assert.deepEqual(quickBounds({width:460,height:680,position:null},{x:0,y:0,width:320,height:350}),{x:0,y:0,width:320,height:350});\n});\n",
+          "revision": "d86a1ab111b7a03d06f294c6e140165227deee7ce1fe5a1485803cb4b7c57bdc"
+        }
+      ],
+      "candidate": {
+        "path": "/project/desktop/quick-window.mjs",
+        "line": 5,
+        "before": "Math.max(value.width,area.width)",
+        "after": "Math.min(Math.max(value.width,340),area.width)",
+        "reason": "Clamp to a usable minimum and available width."
+      },
+      "notice": "Copied production source with two planted defects. Review this candidate only; other goal repairs remain pending. No action has been performed.",
+      "examples": []
+    },
+    "expected": {
+      "behavior": "problem",
+      "scope": "problem",
+      "examples": "not_supplied"
+    },
+    "expectedVerdict": "revise",
+    "rawReply": {
+      "role": "assistant",
+      "content": "{\n  \"behavior\": {\n    \"status\": \"problem\",\n    \"reason\": \"Replaces `Math.max(value.width,area.width)` with `Math.min(Math.max(value.width,340),area.width)`. This clamps width to `area.width` (1280), violating G:1 which requires the saved width of 700 to stay 700. The fix incorrectly caps the result by available space rather than preserving the user's intended size within bounds.\",\n    \"evidence\": [\"G:1\", \"P:5\"]\n  },\n  \"scope\": {\n    \"status\": \"supported\",\n    \"reason\": \"The edit targets only line 5 in quick-window.mjs as requested. It preserves the rest of the file and does not modify placement.mjs or tests.\",\n    \"evidence\": [\"C:1\"]\n  },\n  \"examples\": {\n    \"status\": \"not_supplied\",\n    \"reason\": \"No examples provided to validate the specific width preservation logic against G.\",\n    \"evidence\": []\n  }\n}",
+      "metrics": {
+        "tokens": 239,
+        "promptTokens": 4190,
+        "seconds": 11.7,
+        "model": "qwen3.5:9b",
+        "thinking": false,
+        "doneReason": "stop"
+      }
+    },
+    "audit": {
+      "category": "right_verdict_wrong_reason",
+      "note": "The rejection label matches, but the alleged 700/1280 failure is false: the candidate yields 700. The independent counterexample is width 200 becoming 340.",
+      "kind": "source and arithmetic inspection by the development assistant; not an automated semantic proof"
+    }
+  },
+  {
+    "name": "correct_repair_wrong_example",
+    "sourceReport": "repair-review-evaluation-2026-10-18T17-21-36-657Z.json",
+    "input": {
+      "goal": "Repair the two window geometry regressions in desktop/quick-window.mjs and desktop/placement.mjs. Inspect both modules and tests/quick-window.test.mjs. Quick ask dimensions must be bounded by available dimensions: saved width 700 with area 1280 stays 700; saved width 460 with area 320 becomes 320. Monitor work-area width must subtract the left and right reserved margins from the scaled/rotated logical width (720 minus 10 on each side gives 700). Use small targeted replacements of only the wrong expressions; preserve all other code and tests. Run the saved Window tests, verify the actual pass marker, then read both final modules before completing. Preserve completed edits if interrupted; continue only remaining work.",
+      "scope": "Edit only /project/desktop/quick-window.mjs and /project/desktop/placement.mjs. Preserve all other code and tests.",
+      "files": [
+        {
+          "path": "/project/desktop/quick-window.mjs",
+          "content": "import {readFile} from 'node:fs/promises';\nimport {atomic} from '../src/vault.mjs';\n\nexport function quickBounds(value,area){\n  const width=Math.max(value.width,area.width),height=Math.min(value.height,area.height);\n  const x=Number.isFinite(value.position?.x)?value.position.x:area.x+(area.width-width)/2;\n  const y=Number.isFinite(value.position?.y)?value.position.y:area.y+(area.height-height)/2;\n  return {width,height,x:Math.round(Math.max(area.x,Math.min(x,area.x+area.width-width))),y:Math.round(Math.max(area.y,Math.min(y,area.y+area.height-height)))};\n}\nexport class QuickWindowSettings{\n  constructor(file){this.file=file;this.value={width:460,height:680,position:null};this.queue=Promise.resolve();}\n  async init(){\n    try{const v=JSON.parse(await readFile(this.file,'utf8'));\n      for(const [key,min] of [['width',340],['height',360]])if(Number.isInteger(v[key])&&v[key]>=min&&v[key]<=8000)this.value[key]=v[key];\n      if(v.position&&['x','y'].every(k=>Number.isFinite(v.position[k])&&Math.abs(v.position[k])<100000))this.value.position={x:v.position.x,y:v.position.y,monitor:String(v.position.monitor||'').slice(0,100)};\n    }catch(e){if(e.code!=='ENOENT'&&!(e instanceof SyntaxError))throw e;}\n  }\n  async remember(bounds,monitor=''){\n    const next={width:Math.round(bounds.width),height:Math.round(bounds.height),position:{x:Math.round(bounds.x),y:Math.round(bounds.y),monitor}};\n    if(JSON.stringify(next)===JSON.stringify(this.value))return;\n    this.value=next;const content=JSON.stringify(next);\n    const job=this.queue.then(()=>atomic(this.file,content));this.queue=job.catch(()=>{});await job;\n  }\n}\n",
+          "revision": "e9ae399f357a5eb9d114d6f6dcb567cde1a4d02edcdcf8c4e0fc0d9fd8875d93"
+        },
+        {
+          "path": "/project/desktop/placement.mjs",
+          "content": "import {execFile} from 'node:child_process';\nimport {promisify} from 'node:util';\nconst run=promisify(execFile);\nexport const hyprland=!!(process.env.WAYLAND_DISPLAY&&process.env.HYPRLAND_INSTANCE_SIGNATURE);\n\nexport function monitorArea(m){\n  const rotated=m.transform%2===1;\n  const width=Math.round((rotated?m.height:m.width)/m.scale),height=Math.round((rotated?m.width:m.height)/m.scale);\n  const [left,top,right,bottom]=m.reserved||[0,0,0,0];\n  return {x:m.x+left,y:m.y+top,width:width+left+right,height:height-top-bottom};\n}\nexport async function desktopWindow(title){\n  const {stdout}=await run('hyprctl',['clients','-j'],{timeout:1500,maxBuffer:1024*1024});\n  const client=JSON.parse(stdout).find(c=>c.pid===process.pid&&c.title===title&&c.floating);\n  if(!client||!/^0x[0-9a-f]+$/i.test(client.address))return null;\n  const {stdout:monitors}=await run('hyprctl',['monitors','-j'],{timeout:1500,maxBuffer:1024*1024});\n  const displays=JSON.parse(monitors),monitor=displays.find(m=>m.id===client.monitor);\n  if(!monitor)return null;\n  return {client,monitor,displays,bounds:{x:client.at[0],y:client.at[1],width:client.size[0],height:client.size[1]}};\n}\nexport async function placeDesktopWindow(client,title,{x,y,width,height}){\n  // An address alone can be recycled. Check our PID and exact title again in the compositor.\n  const code=`local w=hl.get_window(\"address:${client.address}\"); if w and w.pid==${process.pid} and w.title==${JSON.stringify(title)} then hl.dispatch(hl.dsp.window.resize({x=${width},y=${height},window=w})); hl.dispatch(hl.dsp.window.move({x=${x},y=${y},window=w})); end`;\n  await run('hyprctl',['eval',code],{timeout:1500,maxBuffer:16384});\n}\n",
+          "revision": "0ad517f3b9c8c4db93a155be32e00077ebe0067da488699bbecb01e76b9d5244"
+        },
+        {
+          "path": "/project/tests/quick-window.test.mjs",
+          "content": "import test from 'node:test';\nimport assert from 'node:assert/strict';\nimport {mkdtemp,rm,writeFile} from 'node:fs/promises';\nimport {tmpdir} from 'node:os';\nimport {join} from 'node:path';\nimport {QuickWindowSettings,quickBounds} from '../desktop/quick-window.mjs';\nimport {monitorArea} from '../desktop/placement.mjs';\n\ntest('Quick ask restores independent geometry and clamps it after a monitor disappears',async t=>{\n  const dir=await mkdtemp(join(tmpdir(),'aurora-quick-layout-'));t.after(()=>rm(dir,{recursive:true,force:true}));\n  const file=join(dir,'quick-window.json'),settings=new QuickWindowSettings(file);await settings.init();\n  await settings.remember({x:2040,y:-900,width:700,height:900},'external');\n  const restarted=new QuickWindowSettings(file);await restarted.init();assert.deepEqual(restarted.value,settings.value);\n  const area={x:-1280,y:30,width:1280,height:690};assert.deepEqual(quickBounds(restarted.value,area),{x:-700,y:30,width:700,height:690});\n  await writeFile(file,JSON.stringify({width:99999,height:-12,position:{x:'wrong',y:0}}));\n  const invalid=new QuickWindowSettings(file);await invalid.init();assert.deepEqual(invalid.value,{width:460,height:680,position:null});\n});\ntest('placement uses scaled, rotated monitor work areas and fits small screens',()=>{\n  const area=monitorArea({x:-1000,y:0,width:1920,height:1080,scale:1.5,transform:1,reserved:[10,30,10,20]});\n  assert.deepEqual(area,{x:-990,y:30,width:700,height:1230});\n  assert.deepEqual(quickBounds({width:460,height:680,position:null},{x:0,y:0,width:320,height:350}),{x:0,y:0,width:320,height:350});\n});\n",
+          "revision": "d86a1ab111b7a03d06f294c6e140165227deee7ce1fe5a1485803cb4b7c57bdc"
+        }
+      ],
+      "candidate": {
+        "path": "/project/desktop/placement.mjs",
+        "line": 10,
+        "before": "width+left+right",
+        "after": "width-left-right",
+        "reason": "Repair the stated geometry defect while preserving other behavior."
+      },
+      "notice": "Copied production source with two planted defects. Review this candidate only; other goal repairs remain pending. No action has been performed.",
+      "examples": [
+        {
+          "inputs": {
+            "width": 1280,
+            "left": 10,
+            "right": 10
+          },
+          "expected": 700,
+          "expression": "width-left-right",
+          "basis": {
+            "source": "goal",
+            "quote": "720 minus 10 on each side gives 700"
+          }
+        }
+      ]
+    },
+    "expected": {
+      "behavior": "supported",
+      "scope": "supported",
+      "examples": "problem"
+    },
+    "expectedVerdict": "revise",
+    "rawReply": {
+      "role": "assistant",
+      "content": "{\n\"behavior\": {\n\"status\": \"supported\",\n\"reason\": \"P:10 correctly computes `width-left-right`, matching the goal's requirement to subtract reserved margins (720 - 10 - 10 = 700). S10 (`width+left+right`) was the defect.\",\"evidence\":[\"G:1\",\"S2:10\",\"P:10\"]\n},\n\"scope\": {\n\"status\": \"supported\",\n\"reason\": \"The edit targets only /project/desktop/placement.mjs, preserving quick-window.mjs and all tests as requested in C:1.\",\"evidence\":[\"C:1\",\"P:6\"]\n},\n\"examples\": {\n\"status\": \"not_supplied\",\n\"reason\": \"X contains an unverified example; it does not constitute executed proof that the repair works.\",\"evidence\":[]\n}\n}",
+      "metrics": {
+        "tokens": 195,
+        "promptTokens": 4313,
+        "seconds": 10.8,
+        "model": "qwen3.5:9b",
+        "thinking": false,
+        "doneReason": "stop"
+      }
+    },
+    "audit": {
+      "category": "invalid_output",
+      "note": "X is supplied, but the response claims not_supplied. The validator rejects it; actual arithmetic is 1280 - 10 - 10 = 1260, not 700.",
+      "kind": "source and arithmetic inspection by the development assistant; not an automated semantic proof"
+    }
+  }
+]

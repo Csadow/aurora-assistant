@@ -1,0 +1,11 @@
+import '../src/environment.mjs';
+import { cp, mkdir, readFile, writeFile, chmod } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { join } from 'node:path';
+import { homedir } from 'node:os';
+import { fileURLToPath } from 'node:url';
+const home=homedir(),root=fileURLToPath(new URL('../',import.meta.url));const source=process.env.AURORA_ELECTRON_SOURCE||join(root,'node_modules/electron/dist');const target=join(home,'.local/share/aurora-desktop-runtime');
+await mkdir(target,{recursive:true});await cp(source,target,{recursive:true,mode:constants.COPYFILE_FICLONE});await chmod(join(target,'electron'),0o755);
+const desktop=`[Desktop Entry]\nType=Application\nName=Aurora\nGenericName=Personal AI Assistant\nComment=Local chat and Markdown memory\nExec=/usr/bin/node "${join(root,'scripts/start-desktop.mjs')}"\nIcon=${join(root,'public/icon.svg')}\nTerminal=false\nCategories=Office;\nKeywords=AI;Assistant;Memory;Notes;\nStartupWMClass=aurora-assistant\nStartupNotify=true\n`;
+await mkdir(join(home,'.local/share/applications'),{recursive:true});await writeFile(join(home,'.local/share/applications/aurora-assistant.desktop'),desktop);
+console.log(`Installed Aurora desktop with Electron ${(await readFile(join(target,'version'),'utf8')).trim()}\nLaunch Aurora from your application menu.`);

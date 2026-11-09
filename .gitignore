@@ -1,0 +1,21 @@
+node_modules/
+artifacts/
+*.log
+.env
+.env.*
+*.tar.gz
+*.partial
+__pycache__/
+.local-ai/
+*.apk
+*.aab
+*.jks
+*.keystore
+*.pem
+*.key
+*.p12
+*.sqlite
+*.db
+.aster/
+Aurora Memory/
+Aurora Backups/

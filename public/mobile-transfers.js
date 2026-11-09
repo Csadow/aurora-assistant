@@ -1,0 +1,28 @@
+export async function mobileTransferSettings({host,api,escape,toast}){
+  const section=document.createElement('section');section.id='mobile-transfer-section';
+  section.innerHTML='<hr><h3>Mobile transfer</h3><p class="settings-help">Move selected Markdown memory between your phone and laptop using a file. Each incoming change is reviewed here. Nothing connects to your phone or starts a task automatically.</p><details><summary>Export selected notes to phone</summary><p class="settings-help">Choose what to include. The export contains private note text; keep the file somewhere private.</p><input id="mobile-note-search" type="search" placeholder="Filter notes" aria-label="Filter notes for phone export"><div id="mobile-note-choices" class="mobile-note-choices"></div><button id="mobile-export">Export selected notes</button><p id="mobile-export-status" role="status"></p></details><label>Review a backup exported from Aurora Mobile<input id="mobile-import" type="file" accept="application/json,.json"></label><p id="mobile-transfer-error" class="error" role="alert"></p><div id="mobile-transfer-review"></div><h4>Recent transfer reviews</h4><div id="mobile-transfer-history"></div>';
+  host.append(section);const $=s=>section.querySelector(s);let plan=null,notes=[],chosen=new Set();
+  const safe=fn=>async e=>{try{$('#mobile-transfer-error').textContent='';await fn(e);}catch(error){$('#mobile-transfer-error').textContent=error.message;}};
+  function choices(){const q=$('#mobile-note-search').value.toLocaleLowerCase();$('#mobile-note-choices').innerHTML=notes.filter(n=>`${n.path} ${n.title}`.toLocaleLowerCase().includes(q)).map(n=>`<label class="check-row"><input type="checkbox" data-mobile-note="${escape(n.path)}" ${chosen.has(n.path)?'checked':''}>${escape(n.path)}</label>`).join('');}
+  async function history(){const list=await api('/api/mobile-transfers');$('#mobile-transfer-history').innerHTML=list.map(p=>`<button data-mobile-review="${p.id}">${escape(new Date(p.created).toLocaleString())} · ${p.notes} notes · ${p.requests} requests · ${p.pending} awaiting review</button>`).join('')||'<p class="settings-help">No transfers reviewed yet.</p>';}
+  function render(){
+    if(!plan){$('#mobile-transfer-review').replaceChildren();return;}
+    $('#mobile-transfer-review').innerHTML=`<h4>Incoming changes</h4><p class="settings-help">${plan.ignoredRequests} chat, answered or cancelled requests excluded. Conflicts can be kept as separate notes; no existing note is replaced in that case.</p>${plan.rows.map(r=>`<article class="mobile-transfer-row" data-mobile-row="${r.id}"><strong>${escape(r.path)}</strong><p class="settings-help">${escape(r.reason)}</p>${r.kind==='conflict'?`<p class="settings-help">Copy destination: ${escape(r.copyPath)}</p>`:''}<details><summary>Compare exact text</summary><label>Desktop version<pre>${escape(r.before??'(No desktop note)')}</pre></label><label>Incoming version<pre>${escape(r.content)}</pre></label></details>${r.result?`<p class="mobile-transfer-result" role="status">${escape(r.result.status)}${r.result.path?' · '+escape(r.result.path):''}</p>`:['keep','identical'].includes(r.kind)?'<p class="settings-help">No change needed.</p>':`<div class="action-buttons">${r.kind==='conflict'?`<button data-mobile-choice="copy" data-row="${r.id}">Keep both versions</button>`:`<button data-mobile-choice="save" data-row="${r.id}">${r.type==='request'?'Save unstarted request':r.kind==='update'?'Save reviewed update':'Add reviewed note'}</button>`}<button data-mobile-choice="skip" data-row="${r.id}">Skip</button></div>${r.intent?'<p class="settings-help">A save was interrupted. Retry the same choice to check whether it completed.</p>':''}`}</article>`).join('')||'<p>No notes or waiting laptop requests in this file.</p>'}`;
+  }
+  $('#mobile-note-search').oninput=choices;
+  $('#mobile-note-choices').onchange=e=>{const path=e.target.dataset.mobileNote;if(path)e.target.checked?chosen.add(path):chosen.delete(path);};
+  $('#mobile-export').onclick=safe(async()=>{
+    const result=await api('/api/mobile-transfer-export',{paths:[...chosen]});
+    const url=URL.createObjectURL(new Blob([JSON.stringify(result.bundle,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download=result.filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
+    $('#mobile-export-status').textContent=`Prepared ${result.bundle.notes.length} selected notes. Import ${result.filename} in Aurora Mobile Settings.`;
+  });
+  $('#mobile-import').onchange=safe(async e=>{const file=e.target.files[0];e.target.value='';if(!file)return;if(file.size>4*1024*1024)throw Error('Choose an Aurora backup smaller than 4 MB.');plan=await api('/api/mobile-transfer-preview',{raw:await file.text()});render();await history();});
+  $('#mobile-transfer-history').onclick=safe(async e=>{const button=e.target.closest('[data-mobile-review]');if(!button)return;plan=await api('/api/mobile-transfer?id='+button.dataset.mobileReview);render();});
+  $('#mobile-transfer-review').onclick=safe(async e=>{
+    const b=e.target.closest('[data-mobile-choice]');if(!b)return;const current=plan;
+    section.querySelectorAll('[data-mobile-choice]').forEach(b=>b.disabled=true);
+    try{plan=await api('/api/mobile-transfer-decide',{id:current.id,digest:current.digest,rowId:b.dataset.row,choice:b.dataset.mobileChoice});render();await history();toast('Transfer review saved. No task was started.');}
+    finally{section.querySelectorAll('[data-mobile-choice]').forEach(b=>b.disabled=false);}
+  });
+  notes=await api('/api/notes');choices();await history();
+}

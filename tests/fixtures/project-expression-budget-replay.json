@@ -1,0 +1,945 @@
+{
+  "description": "Disposable local Qwen two-file repair paused before its 13th call when complete context exceeded 24,000 bytes. No personal data or original project files.",
+  "record": {
+    "id": "76d9a2f3-6860-4ffe-82c6-9317ff946d55",
+    "version": 19,
+    "engine": "local",
+    "routineContinuation": false,
+    "revision": 1,
+    "directives": [],
+    "planHistory": [],
+    "conversation": null,
+    "goal": "Fix the two window geometry regressions in desktop/quick-window.mjs and desktop/placement.mjs. Inspect both modules and tests/quick-window.test.mjs. Quick ask width and height must each be the smaller of the saved dimension and available dimension, including when a saved position exists: saved width 700 with area width 1280 stays 700; saved width 460 with area width 320 becomes 320. Monitor work-area width must subtract the left and right reserved margins after scaling/rotation (720 logical pixels minus 10 on each side gives 700). Read the existing tests to verify these expectations. Use targeted patches to change only the incorrect expressions and preserve all other code. Run the saved Window placement tests, verify the actual pass marker, and read both final modules after the test.",
+    "scope": "Only the copied project at /tmp/aurora-workspace-live-bcDC2M/project. The only editable files are desktop/quick-window.mjs and desktop/placement.mjs.",
+    "skills": [],
+    "requirements": {
+      "files": [
+        {
+          "path": "/tmp/aurora-workspace-live-bcDC2M/project/desktop/quick-window.mjs",
+          "lineEndings": "lf",
+          "finalNewline": "required"
+        },
+        {
+          "path": "/tmp/aurora-workspace-live-bcDC2M/project/desktop/placement.mjs",
+          "lineEndings": "lf",
+          "finalNewline": "required"
+        }
+      ],
+      "commands": [
+        {
+          "program": "/usr/bin/node",
+          "args": [
+            "--test",
+            "tests/quick-window.test.mjs"
+          ],
+          "cwd": "/tmp/aurora-workspace-live-bcDC2M/project",
+          "outputIncludes": "pass 2"
+        }
+      ]
+    },
+    "project": {
+      "id": "3f6a190d-1c1a-45e3-ad95-71d992aa6d36",
+      "name": "Copied Aurora window placement",
+      "notePath": "20 Projects/Example Project.md",
+      "folders": [
+        "/tmp/aurora-workspace-live-bcDC2M/project"
+      ],
+      "checks": [
+        {
+          "name": "Window placement tests",
+          "program": "/usr/bin/node",
+          "args": [
+            "--test",
+            "tests/quick-window.test.mjs"
+          ],
+          "cwd": "/tmp/aurora-workspace-live-bcDC2M/project",
+          "outputIncludes": "pass 2"
+        }
+      ],
+      "revision": 1,
+      "created": "2026-11-07T21:02:14.693Z",
+      "updated": "2026-11-07T21:02:14.693Z"
+    },
+    "planReviewRequired": true,
+    "planApprovedRevision": 1,
+    "model": "qwen3.5:9b",
+    "generation": {
+      "think": true,
+      "num_predict": 6144,
+      "num_ctx": 12288
+    },
+    "status": "paused",
+    "created": "2026-11-07T21:02:14.699Z",
+    "updated": "2026-11-07T21:04:35.723Z",
+    "steps": [
+      {
+        "title": "Complete the requested project outcome and verify the saved checks",
+        "check": "Satisfy the saved goal and latest user updates. Inspect current files, make only necessary reviewed changes, run every required check successfully, verify its output, then read every required output file. Inspection alone is not completion. Preserve previously completed effects.",
+        "id": "b7acb13a-58b1-4456-aa20-fb02430535c8",
+        "status": "running"
+      }
+    ],
+    "current": 0,
+    "operations": [
+      {
+        "id": "7af95c6d-2ce3-42dd-9149-4613c3c19072",
+        "step": "b7acb13a-58b1-4456-aa20-fb02430535c8",
+        "revision": 1,
+        "name": "read_system_file",
+        "arguments": {
+          "path": "/tmp/aurora-workspace-live-bcDC2M/project/desktop/quick-window.mjs"
+        },
+        "readGroup": {
+          "id": "1e0a75a3-e53b-45cf-8743-03198e9050d0",
+          "index": 0,
+          "total": 3
+        },
+        "status": "completed",
+        "started": "2026-11-07T21:02:24.140Z",
+        "result": {
+          "path": "/tmp/aurora-workspace-live-bcDC2M/project/desktop/quick-window.mjs",
+          "content": "import {readFile} from 'node:fs/promises';\nimport {atomic} from '../src/vault.mjs';\n\nexport function quickBounds(value,area){\n  const width=Math.max(value.width,area.width),height=Math.min(value.height,area.height);\n  const x=Number.isFinite(value.position?.x)?value.position.x:area.x+(area.width-width)/2;\n  const y=Number.isFinite(value.position?.y)?value.position.y:area.y+(area.height-height)/2;\n  return {width,height,x:Math.round(Math.max(area.x,Math.min(x,area.x+area.width-width))),y:Math.round(Math.max(area.y,Math.min(y,area.y+area.height-height)))};\n}\nexport class QuickWindowSettings{\n  constructor(file){this.file=file;this.value={width:460,height:680,position:null};this.queue=Promise.resolve();}\n  async init(){\n    try{const v=JSON.parse(await readFile(this.file,'utf8'));\n      for(const [key,min] of [['width',340],['height',360]])if(Number.isInteger(v[key])&&v[key]>=min&&v[key]<=8000)this.value[key]=v[key];\n      if(v.position&&['x','y'].every(k=>Number.isFinite(v.position[k])&&Math.abs(v.position[k])<100000))this.value.position={x:v.position.x,y:v.position.y,monitor:String(v.position.monitor||'').slice(0,100)};\n    }catch(e){if(e.code!=='ENOENT'&&!(e instanceof SyntaxError))throw e;}\n  }\n  async remember(bounds,monitor=''){\n    const next={width:Math.round(bounds.width),height:Math.round(bounds.height),position:{x:Math.round(bounds.x),y:Math.round(bounds.y),monitor}};\n    if(JSON.stringify(next)===JSON.stringify(this.value))return;\n    this.value=next;const content=JSON.stringify(next);\n    const job=this.queue.then(()=>atomic(this.file,content));this.queue=job.catch(()=>{});await job;\n  }\n}\n",
+          "revision": "e9ae399f357a5eb9d114d6f6dcb567cde1a4d02edcdcf8c4e0fc0d9fd8875d93",
+          "offset": 0,
+          "totalCharacters": 1627,
+          "nextOffset": null,
+          "truncated": false
+        },
+        "finished": "2026-11-07T21:02:24.141Z"
+      },
+      {
+        "id": "928d8c80-656e-4b73-843f-c210256800af",
+        "step": "b7acb13a-58b1-4456-aa20-fb02430535c8",
+        "revision": 1,
+        "name": "read_system_file",
+        "arguments": {
+          "path": "/tmp/aurora-workspace-live-bcDC2M/project/desktop/placement.mjs"
+        },
+        "readGroup": {
+          "id": "1e0a75a3-e53b-45cf-8743-03198e9050d0",
+          "index": 1,
+          "total": 3
+        },
+        "status": "completed",
+        "started": "2026-11-07T21:02:24.142Z",
+        "result": {
+          "path": "/tmp/aurora-workspace-live-bcDC2M/project/desktop/placement.mjs",
+          "content": "import {execFile} from 'node:child_process';\nimport {promisify} from 'node:util';\nconst run=promisify(execFile);\nexport const hyprland=!!(process.env.WAYLAND_DISPLAY&&process.env.HYPRLAND_INSTANCE_SIGNATURE);\n\nexport function monitorArea(m){\n  const rotated=m.transform%2===1;\n  const width=Math.round((rotated?m.height:m.width)/m.scale),height=Math.round((rotated?m.width:m.height)/m.scale);\n  const [left,top,right,bottom]=m.reserved||[0,0,0,0];\n  return {x:m.x+left,y:m.y+top,width:width+left+right,height:height-top-bottom};\n}\nexport async function desktopWindow(title){\n  const {stdout}=await run('hyprctl',['clients','-j'],{timeout:1500,maxBuffer:1024*1024});\n  const client=JSON.parse(stdout).find(c=>c.pid===process.pid&&c.title===title&&c.floating);\n  if(!client||!/^0x[0-9a-f]+$/i.test(client.address))return null;\n  const {stdout:monitors}=await run('hyprctl',['monitors','-j'],{timeout:1500,maxBuffer:1024*1024});\n  const displays=JSON.parse(monitors),monitor=displays.find(m=>m.id===client.monitor);\n  if(!monitor)return null;\n  return {client,monitor,displays,bounds:{x:client.at[0],y:client.at[1],width:client.size[0],height:client.size[1]}};\n}\nexport async function placeDesktopWindow(client,title,{x,y,width,height}){\n  // An address alone can be recycled. Check our PID and exact title again in the compositor.\n  const code=`local w=hl.get_window(\"address:${client.address}\"); if w and w.pid==${process.pid} and w.title==${JSON.stringify(title)} then hl.dispatch(hl.dsp.window.resize({x=${width},y=${height},window=w})); hl.dispatch(hl.dsp.window.move({x=${x},y=${y},window=w})); end`;\n  await run('hyprctl',['eval',code],{timeout:1500,maxBuffer:16384});\n}\n",
+          "revision": "0ad517f3b9c8c4db93a155be32e00077ebe0067da488699bbecb01e76b9d5244",
+          "offset": 0,
+          "totalCharacters": 1675,
+          "nextOffset": null,
+          "truncated": false
+        },
+        "finished": "2026-11-07T21:02:24.143Z"
+      },
+      {
+        "id": "6f04f435-b354-4add-9465-11fbe40ec1dc",
+        "step": "b7acb13a-58b1-4456-aa20-fb02430535c8",
+        "revision": 1,
+        "name": "read_system_file",
+        "arguments": {
+          "path": "/tmp/aurora-workspace-live-bcDC2M/project/tests/quick-window.test.mjs"
+        },
+        "readGroup": {
+          "id": "1e0a75a3-e53b-45cf-8743-03198e9050d0",
+          "index": 2,
+          "total": 3
+        },
+        "status": "completed",
+        "started": "2026-11-07T21:02:24.143Z",
+        "result": {
+          "path": "/tmp/aurora-workspace-live-bcDC2M/project/tests/quick-window.test.mjs",
+          "content": "import test from 'node:test';\nimport assert from 'node:assert/strict';\nimport {mkdtemp,rm,writeFile} from 'node:fs/promises';\nimport {tmpdir} from 'node:os';\nimport {join} from 'node:path';\nimport {QuickWindowSettings,quickBounds} from '../desktop/quick-window.mjs';\nimport {monitorArea} from '../desktop/placement.mjs';\n\ntest('Quick ask restores independent geometry and clamps it after a monitor disappears',async t=>{\n  const dir=await mkdtemp(join(tmpdir(),'aurora-quick-layout-'));t.after(()=>rm(dir,{recursive:true,force:true}));\n  const file=join(dir,'quick-window.json'),settings=new QuickWindowSettings(file);await settings.init();\n  await settings.remember({x:2040,y:-900,width:700,height:900},'external');\n  const restarted=new QuickWindowSettings(file);await restarted.init();assert.deepEqual(restarted.value,settings.value);\n  const area={x:-1280,y:30,width:1280,height:690};assert.deepEqual(quickBounds(restarted.value,area),{x:-700,y:30,width:700,height:690});\n  await writeFile(file,JSON.stringify({width:99999,height:-12,position:{x:'wrong',y:0}}));\n  const invalid=new QuickWindowSettings(file);await invalid.init();assert.deepEqual(invalid.value,{width:460,height:680,position:null});\n});\ntest('placement uses scaled, rotated monitor work areas and fits small screens',()=>{\n  const area=monitorArea({x:-1000,y:0,width:1920,height:1080,scale:1.5,transform:1,reserved:[10,30,10,20]});\n  assert.deepEqual(area,{x:-990,y:30,width:700,height:1230});\n  assert.deepEqual(quickBounds({width:460,height:680,position:null},{x:0,y:0,width:320,height:350}),{x:0,y:0,width:320,height:350});\n});\n",
+          "revision": "d86a1ab111b7a03d06f294c6e140165227deee7ce1fe5a1485803cb4b7c57bdc",
+          "offset": 0,
+          "totalCharacters": 1602,
+          "nextOffset": null,
+          "truncated": false
+        },
+        "finished": "2026-11-07T21:02:24.144Z"
+      },
+      {
+        "id": "648f1803-bda8-4336-957c-40aa74fb25e8",
+        "step": "b7acb13a-58b1-4456-aa20-fb02430535c8",
+        "revision": 1,
+        "name": "record_repair_plan",
+        "arguments": {
+          "repairs": [
+            {
+              "after": "const width=Math.min(value.width,area.width),height=Math.min(value.height,area.height);",
+              "before": "const width=Math.max(value.width,area.width),height=Math.min(value.height,area.height);",
+              "file": "/tmp/aurora-workspace-live-bcDC2M/project/desktop/quick-window.mjs",
+              "line": 5,
+              "reason": "Width must use Math.min (smaller of saved/available) not Math.max. Test expects 700 fitting in 1280 area → stays 700; 460 in 320 area → becomes 320."
+            },
+            {
+              "after": "return {x:m.x+left,y:m.y+top,width:width-left-right,height:height-top-bottom};",
+              "before": "return {x:m.x+left,y:m.y+top,width:width+left+right,height:height-top-bottom};",
+              "file": "/tmp/aurora-workspace-live-bcDC2M/project/desktop/placement.mjs",
+              "line": 10,
+              "reason": "Left/right margins should subtract from scaled width, not add. Formula is width minus horizontal reserves after rotation scaling."
+            }
+          ]
+        },
+        "status": "completed",
+        "started": "2026-11-07T21:02:49.125Z",
+        "result": {
+          "repairs": [
+            {
+              "id": "R4.1",
+              "path": "/tmp/aurora-workspace-live-bcDC2M/project/desktop/quick-window.mjs",
+              "revision": "e9ae399f357a5eb9d114d6f6dcb567cde1a4d02edcdcf8c4e0fc0d9fd8875d93",
+              "after": "const width=Math.min(value.width,area.width),height=Math.min(value.height,area.height);",
+              "before": "const width=Math.max(value.width,area.width),height=Math.min(value.height,area.height);",
+              "line": 5,
+              "reason": "Width must use Math.min (smaller of saved/available) not Math.max. Test expects 700 fitting in 1280 area → stays 700; 460 in 320 area → becomes 320.",
+              "evidence": "E1",
+              "binding": "required_file",
+              "expressionBinding": {
+                "status": "bound",
+                "column": 15,
+                "before": "Math.max(value.width,area.width)",
+                "after": "Math.min(value.width,area.width)",
+                "requiredInputs": [
+                  "value.width",
+                  "area.width"
+                ],
+                "introducedInputs": []
+              }
+            },
+            {
+              "id": "R4.2",
+              "path": "/tmp/aurora-workspace-live-bcDC2M/project/desktop/placement.mjs",
+              "revision": "0ad517f3b9c8c4db93a155be32e00077ebe0067da488699bbecb01e76b9d5244",
+              "after": "return {x:m.x+left,y:m.y+top,width:width-left-right,height:height-top-bottom};",
+              "before": "return {x:m.x+left,y:m.y+top,width:width+left+right,height:height-top-bottom};",
+              "line": 10,
+              "reason": "Left/right margins should subtract from scaled width, not add. Formula is width minus horizontal reserves after rotation scaling.",
+              "evidence": "E2",
+              "binding": "required_file",
+              "expressionBinding": {
+                "status": "bound",
+                "column": 38,
+                "before": "width+left+right",
+                "after": "width-left-right",
+                "requiredInputs": [
+                  "width",
+                  "left",
+                  "right"
+                ],
+                "introducedInputs": []
+              }
+            }
+          ],
+          "notice": "Proposed diagnoses only. Each repair still needs exact action approval, fresh checks and final readback. This list does not establish coverage of the whole goal."
+        },
+        "finished": "2026-11-07T21:02:49.130Z"
+      },
+      {
+        "id": "51b8dffa-5024-4a74-85d6-603210985eb4",
+        "step": "b7acb13a-58b1-4456-aa20-fb02430535c8",
+        "revision": 1,
+        "name": "read_system_file",
+        "arguments": {
+          "path": "/tmp/aurora-workspace-live-bcDC2M/project/desktop/quick-window.mjs"
+        },
+        "readGroup": {
+          "id": "d428f471-999d-45b5-8afc-7f82ed400be2",
+          "index": 0,
+          "total": 2
+        },
+        "status": "completed",
+        "started": "2026-11-07T21:02:59.701Z",
+        "result": {
+          "path": "/tmp/aurora-workspace-live-bcDC2M/project/desktop/quick-window.mjs",
+          "content": "import {readFile} from 'node:fs/promises';\nimport {atomic} from '../src/vault.mjs';\n\nexport function quickBounds(value,area){\n  const width=Math.max(value.width,area.width),height=Math.min(value.height,area.height);\n  const x=Number.isFinite(value.position?.x)?value.position.x:area.x+(area.width-width)/2;\n  const y=Number.isFinite(value.position?.y)?value.position.y:area.y+(area.height-height)/2;\n  return {width,height,x:Math.round(Math.max(area.x,Math.min(x,area.x+area.width-width))),y:Math.round(Math.max(area.y,Math.min(y,area.y+area.height-height)))};\n}\nexport class QuickWindowSettings{\n  constructor(file){this.file=file;this.value={width:460,height:680,position:null};this.queue=Promise.resolve();}\n  async init(){\n    try{const v=JSON.parse(await readFile(this.file,'utf8'));\n      for(const [key,min] of [['width',340],['height',360]])if(Number.isInteger(v[key])&&v[key]>=min&&v[key]<=8000)this.value[key]=v[key];\n      if(v.position&&['x','y'].every(k=>Number.isFinite(v.position[k])&&Math.abs(v.position[k])<100000))this.value.position={x:v.position.x,y:v.position.y,monitor:String(v.position.monitor||'').slice(0,100)};\n    }catch(e){if(e.code!=='ENOENT'&&!(e instanceof SyntaxError))throw e;}\n  }\n  async remember(bounds,monitor=''){\n    const next={width:Math.round(bounds.width),height:Math.round(bounds.height),position:{x:Math.round(bounds.x),y:Math.round(bounds.y),monitor}};\n    if(JSON.stringify(next)===JSON.stringify(this.value))return;\n    this.value=next;const content=JSON.stringify(next);\n    const job=this.queue.then(()=>atomic(this.file,content));this.queue=job.catch(()=>{});await job;\n  }\n}\n",
+          "revision": "e9ae399f357a5eb9d114d6f6dcb567cde1a4d02edcdcf8c4e0fc0d9fd8875d93",
+          "offset": 0,
+          "totalCharacters": 1627,
+          "nextOffset": null,
+          "truncated": false
+        },
+        "finished": "2026-11-07T21:02:59.702Z"
+      },
+      {
+        "id": "a13fb5e9-b4d6-4872-a65c-cf0a25d01495",
+        "step": "b7acb13a-58b1-4456-aa20-fb02430535c8",
+        "revision": 1,
+        "name": "read_system_file",
+        "arguments": {
+          "path": "/tmp/aurora-workspace-live-bcDC2M/project/desktop/placement.mjs"
+        },
+        "readGroup": {
+          "id": "d428f471-999d-45b5-8afc-7f82ed400be2",
+          "index": 1,
+          "total": 2
+        },
+        "status": "completed",
+        "started": "2026-11-07T21:02:59.703Z",
+        "result": {
+          "path": "/tmp/aurora-workspace-live-bcDC2M/project/desktop/placement.mjs",
+          "content": "import {execFile} from 'node:child_process';\nimport {promisify} from 'node:util';\nconst run=promisify(execFile);\nexport const hyprland=!!(process.env.WAYLAND_DISPLAY&&process.env.HYPRLAND_INSTANCE_SIGNATURE);\n\nexport function monitorArea(m){\n  const rotated=m.transform%2===1;\n  const width=Math.round((rotated?m.height:m.width)/m.scale),height=Math.round((rotated?m.width:m.height)/m.scale);\n  const [left,top,right,bottom]=m.reserved||[0,0,0,0];\n  return {x:m.x+left,y:m.y+top,width:width+left+right,height:height-top-bottom};\n}\nexport async function desktopWindow(title){\n  const {stdout}=await run('hyprctl',['clients','-j'],{timeout:1500,maxBuffer:1024*1024});\n  const client=JSON.parse(stdout).find(c=>c.pid===process.pid&&c.title===title&&c.floating);\n  if(!client||!/^0x[0-9a-f]+$/i.test(client.address))return null;\n  const {stdout:monitors}=await run('hyprctl',['monitors','-j'],{timeout:1500,maxBuffer:1024*1024});\n  const displays=JSON.parse(monitors),monitor=displays.find(m=>m.id===client.monitor);\n  if(!monitor)return null;\n  return {client,monitor,displays,bounds:{x:client.at[0],y:client.at[1],width:client.size[0],height:client.size[1]}};\n}\nexport async function placeDesktopWindow(client,title,{x,y,width,height}){\n  // An address alone can be recycled. Check our PID and exact title again in the compositor.\n  const code=`local w=hl.get_window(\"address:${client.address}\"); if w and w.pid==${process.pid} and w.title==${JSON.stringify(title)} then hl.dispatch(hl.dsp.window.resize({x=${width},y=${height},window=w})); hl.dispatch(hl.dsp.window.move({x=${x},y=${y},window=w})); end`;\n  await run('hyprctl',['eval',code],{timeout:1500,maxBuffer:16384});\n}\n",
+          "revision": "0ad517f3b9c8c4db93a155be32e00077ebe0067da488699bbecb01e76b9d5244",
+          "offset": 0,
+          "totalCharacters": 1675,
+          "nextOffset": null,
+          "truncated": false
+        },
+        "finished": "2026-11-07T21:02:59.703Z"
+      },
+      {
+        "id": "3dc50f93-1e65-412a-9654-1fc2b7d30480",
+        "step": "b7acb13a-58b1-4456-aa20-fb02430535c8",
+        "revision": 1,
+        "name": "read_system_file",
+        "arguments": {
+          "path": "/tmp/aurora-workspace-live-bcDC2M/project/tests/quick-window.test.mjs"
+        },
+        "status": "completed",
+        "started": "2026-11-07T21:03:08.380Z",
+        "result": {
+          "path": "/tmp/aurora-workspace-live-bcDC2M/project/tests/quick-window.test.mjs",
+          "content": "import test from 'node:test';\nimport assert from 'node:assert/strict';\nimport {mkdtemp,rm,writeFile} from 'node:fs/promises';\nimport {tmpdir} from 'node:os';\nimport {join} from 'node:path';\nimport {QuickWindowSettings,quickBounds} from '../desktop/quick-window.mjs';\nimport {monitorArea} from '../desktop/placement.mjs';\n\ntest('Quick ask restores independent geometry and clamps it after a monitor disappears',async t=>{\n  const dir=await mkdtemp(join(tmpdir(),'aurora-quick-layout-'));t.after(()=>rm(dir,{recursive:true,force:true}));\n  const file=join(dir,'quick-window.json'),settings=new QuickWindowSettings(file);await settings.init();\n  await settings.remember({x:2040,y:-900,width:700,height:900},'external');\n  const restarted=new QuickWindowSettings(file);await restarted.init();assert.deepEqual(restarted.value,settings.value);\n  const area={x:-1280,y:30,width:1280,height:690};assert.deepEqual(quickBounds(restarted.value,area),{x:-700,y:30,width:700,height:690});\n  await writeFile(file,JSON.stringify({width:99999,height:-12,position:{x:'wrong',y:0}}));\n  const invalid=new QuickWindowSettings(file);await invalid.init();assert.deepEqual(invalid.value,{width:460,height:680,position:null});\n});\ntest('placement uses scaled, rotated monitor work areas and fits small screens',()=>{\n  const area=monitorArea({x:-1000,y:0,width:1920,height:1080,scale:1.5,transform:1,reserved:[10,30,10,20]});\n  assert.deepEqual(area,{x:-990,y:30,width:700,height:1230});\n  assert.deepEqual(quickBounds({width:460,height:680,position:null},{x:0,y:0,width:320,height:350}),{x:0,y:0,width:320,height:350});\n});\n",
+          "revision": "d86a1ab111b7a03d06f294c6e140165227deee7ce1fe5a1485803cb4b7c57bdc",
+          "offset": 0,
+          "totalCharacters": 1602,
+          "nextOffset": null,
+          "truncated": false
+        },
+        "finished": "2026-11-07T21:03:08.381Z"
+      },
+      {
+        "id": "2d773766-d871-4577-9d4e-2e72d4513c3e",
+        "step": "b7acb13a-58b1-4456-aa20-fb02430535c8",
+        "revision": 1,
+        "name": "read_file_group",
+        "arguments": {
+          "calls": [
+            {
+              "id": "call_zgnp12l7",
+              "function": {
+                "index": 0,
+                "name": "check_repair_expression",
+                "arguments": {
+                  "repair": "R4.1",
+                  "cases": [
+                    {
+                      "expected": 700,
+                      "inputs": {
+                        "area.width": 1280,
+                        "value.width": 700
+                      }
+                    },
+                    {
+                      "expected": 320,
+                      "inputs": {
+                        "area.width": 320,
+                        "value.width": 460
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "id": "call_u3rowaw0",
+              "function": {
+                "index": 1,
+                "name": "check_repair_expression",
+                "arguments": {
+                  "repair": "R4.2",
+                  "cases": [
+                    {
+                      "expected": 700,
+                      "inputs": {
+                        "left": 10,
+                        "right": 10,
+                        "width": 720
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "status": "failed",
+        "started": "2026-11-07T21:03:29.603Z",
+        "finished": "2026-11-07T21:03:29.603Z",
+        "result": {
+          "error": "No calls ran. Request 2–4 independent read_system_file calls together, or ONE other tool. Never combine reads with edits, checks, questions or completion."
+        }
+      },
+      {
+        "id": "8d3933f3-77bf-431d-b6ae-20933c81d1dc",
+        "step": "b7acb13a-58b1-4456-aa20-fb02430535c8",
+        "revision": 1,
+        "name": "propose_test_copy",
+        "arguments": {
+          "repair": "R4.1",
+          "check": "C1"
+        },
+        "status": "failed",
+        "started": "2026-11-07T21:03:40.903Z",
+        "result": {
+          "error": "Copy dependencies need inspection. Read these existing files: /tmp/aurora-workspace-live-bcDC2M/project/src/vault.mjs. No copy was requested or run.",
+          "expectedArguments": {
+            "tool": "propose_test_copy",
+            "fields": {
+              "repair": {
+                "type": "string",
+                "allowed": [
+                  "R4.1",
+                  "R4.2"
+                ]
+              },
+              "check": {
+                "type": "string",
+                "allowed": [
+                  "C1"
+                ]
+              }
+            },
+            "required": [
+              "repair",
+              "check"
+            ],
+            "notice": "Use these exact field names. Arrays are JSON arrays, not strings. Rejected proposals performed no action."
+          },
+          "copyReadiness": {
+            "neededReads": [
+              "/tmp/aurora-workspace-live-bcDC2M/project/src/vault.mjs"
+            ],
+            "missing": [],
+            "limitations": [
+              "desktop/placement.mjs: Slash syntax needs manual dependency review",
+              "desktop/placement.mjs: Template syntax needs manual dependency review",
+              "desktop/quick-window.mjs: Slash syntax needs manual dependency review"
+            ],
+            "edges": [
+              {
+                "from": "desktop/quick-window.mjs",
+                "to": "src/vault.mjs"
+              },
+              {
+                "from": "tests/quick-window.test.mjs",
+                "to": "desktop/quick-window.mjs"
+              },
+              {
+                "from": "tests/quick-window.test.mjs",
+                "to": "desktop/placement.mjs"
+              },
+              {
+                "from": "desktop/quick-window.mjs",
+                "to": "src/vault.mjs"
+              }
+            ],
+            "notice": "Literal imports discovered in observed source and candidate only. Computed imports, package resolution and runtime file access need review; this is not a complete dependency graph."
+          }
+        },
+        "finished": "2026-11-07T21:03:40.912Z"
+      },
+      {
+        "id": "8831967a-0adf-4bd0-870a-cf6503cc9a71",
+        "step": "b7acb13a-58b1-4456-aa20-fb02430535c8",
+        "revision": 1,
+        "name": "read_system_file",
+        "arguments": {
+          "path": "/tmp/aurora-workspace-live-bcDC2M/project/src/vault.mjs"
+        },
+        "status": "completed",
+        "started": "2026-11-07T21:03:47.877Z",
+        "result": {
+          "path": "/tmp/aurora-workspace-live-bcDC2M/project/src/vault.mjs",
+          "content": "import {viewList,freshReads} from './read-view.mjs';\nimport {validateTaskLinks} from '../mobile/web/task-links.js';\nimport { mkdir, readdir, readFile, writeFile, rename, lstat, unlink, open } from 'node:fs/promises';\nimport { join, dirname, resolve, basename, posix } from 'node:path';\nimport { taskLine, tasksIn } from './task-meta.mjs';\nimport { createHash, randomUUID } from 'node:crypto';\n\nexport class AppError extends Error { constructor(message, status = 400) { super(message); this.status = status; } }\nexport const sha = text => createHash('sha256').update(text).digest('hex');\nexport const today = () => new Intl.DateTimeFormat('en-CA', {timeZone: 'Asia/Atyrau', year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date());\nexport const slug = value => String(value).normalize('NFKC').replace(/[<>:\"/\\\\|?*\\x00-\\x1f]/g, ' ').replace(/\\s+/g, ' ').trim().replace(/^\\.+|\\.+$/g, '').slice(0, 90) || 'Untitled';\nexport async function atomic(path, content, {mode=0o600,signal,beforeCommit}={}) {\n  signal?.throwIfAborted();\n  await mkdir(dirname(path), {recursive: true, mode: 0o700});\n  const temp = `${path}.${randomUUID()}.tmp`;\n  try {\n    const file=await open(temp,'wx',mode);\n    try { await file.writeFile(content); await file.chmod(mode); await file.sync(); }\n    finally { await file.close(); }\n    await beforeCommit?.(); signal?.throwIfAborted(); await rename(temp, path);\n    // Persist both the bytes and replacement directory entry before acknowledging\n    // a saved action. Rename alone is atomic, but not durable after power loss.\n    const directory=await open(dirname(path),'r');\n    try { await directory.sync(); } finally { await directory.close(); }\n  }\n  finally { await unlink(temp).catch(() => {}); }\n}\nexport function parseNote(path, content) {\n  const meta = {};\n  const fm = content.match(/^---\\r?\\n([\\s\\S]*?)\\r?\\n---(?:\\r?\\n|$)/);\n  const scalar=value=>{try{return JSON.parse(value);}catch{}return value.replace(/^'(.*)'$/,'$1').replace(/''/g,\"'\");};\n  let listKey;\n  for (const line of fm?.[1].split('\\n') || []) {\n    const match = line.match(/^([\\w-]+):\\s*(.*)$/);\n    if (match) {\n      let val=match[2].trim();listKey=!val?match[1]:null;\n      if(listKey)meta[listKey]=[];\n      else if(/^\\[.*\\]$/.test(val)){try{meta[match[1]]=JSON.parse(val);}catch{meta[match[1]]=val.slice(1,-1).split(',').map(v=>scalar(v.trim())).filter(Boolean);}}\n      else meta[match[1]]=scalar(val);\n    }else if(listKey){const item=line.match(/^\\s*-\\s+(.+)$/);if(item)meta[listKey].push(scalar(item[1].trim()));else if(line.trim())listKey=null;}\n  }\n  const body = fm ? content.slice(fm[0].length) : content;\n  const title = String(meta.title || body.match(/^#\\s+(.+)$/m)?.[1] || basename(path, '.md'));\n  const links = [...body.matchAll(/\\[\\[([^\\]|#]+)(?:#[^\\]|]*)?(?:\\|[^\\]]*)?\\]\\]/g)].map(m => m[1].trim());\n  const tags = [...new Set([...(Array.isArray(meta.tags) ? meta.tags : []), ...[...body.matchAll(/(?:^|\\s)#([\\p{L}\\p{N}_/-]+)/gu)].map(m => m[1])])];\n  return {path, title, content, body, revision: sha(content), links, tags, aliases:Array.isArray(meta.aliases)?meta.aliases.map(String):[], status: meta.status || (path.startsWith('90 Journal/') ? 'journal' : 'confirmed'), pinned: meta.pinned === true, updated: meta.updated || '', kind: meta.kind || 'note', source: String(meta.source || '')};\n}\nexport function markdown(title, body, meta = {}) {\n  return `---\\n${Object.entries({title, ...meta, updated: today()}).map(([k,v]) => `${k}: ${JSON.stringify(v)}`).join('\\n')}\\n---\\n\\n# ${title}\\n\\n${body.trim()}\\n`;\n}\n\nexport class Vault {\n  constructor(root) { this.root = resolve(root); this.queue = Promise.resolve(); }\n  async init() {\n    await mkdir(this.root, {recursive: true, mode: 0o700});\n    for (const folder of ['00 Home','10 Profile','20 Projects','30 Knowledge','40 Tasks','50 Daily','60 Inbox','90 Journal','99 Archive','.aster/history','.aster/trash','.obsidian']) await mkdir(join(this.root,folder),{recursive:true,mode:0o700});\n    const marker=await this.safe('.aster/Initialized.md',true);\n    try{await readFile(marker);return;}catch(e){if(e.code!=='ENOENT')throw e;}\n    const seeds = {\n      '00 Home/Start here.md': markdown('Start here', 'This is your personal memory vault. Open this folder as a vault in Obsidian, or edit notes in Aurora.\\n\\n- [[10 Profile/About me|About me]] — preferences and context you want remembered\\n- [[10 Profile/Assistant preferences|Assistant preferences]]\\n- [[20 Projects/Example Project|Example Project]]\\n- [[40 Tasks/Tasks|Tasks]]\\n\\nUse **Remember** for a fact, **New note** for knowledge, and **Today** for a daily note. Link notes with `[[note name]]`. Chat journals are history, not confirmed facts. Proposed memories are excluded from recall until you approve them.\\n\\nPinned notes are included in every conversation. Avoid putting passwords or tokens in your memory.', {kind:'guide',status:'reference'}),\n      '10 Profile/About me.md': markdown('About me', 'This profile note is a template. Add details you want Aurora to remember.\\n\\n## Add your own context\\n\\nAdd your preferred name, current goals, interests, and constraints here when you are ready.\\n\\nRelated: [[Assistant preferences]]', {pinned:true,kind:'profile',status:'confirmed'}),\n      '10 Profile/Assistant preferences.md': markdown('Assistant preferences', 'Help with everyday life, projects, learning, writing, and planning. Give practical next steps. Separate known facts from suggestions. Ask when important context is missing. Use my saved notes when relevant and cite the notes you used.\\n\\nMemory should be transparent and portable.\\n\\nRelated: [[About me]]', {pinned:true,kind:'profile',status:'confirmed'}),\n      '20 Projects/Example Project.md': markdown('Example Project', 'This is a placeholder project note. Add your own project details here.\\n\\nProject directory: configure locally.\\n\\nReview project files before making specific claims.', {kind:'project',status:'reference',tags:['projects']}),\n      '40 Tasks/Tasks.md': markdown('Tasks', 'Capture an actionable next step here, or use the task input in Aurora.\\n\\n## Tasks', {kind:'tasks',status:'confirmed'})\n    };\n    for (const [path, content] of Object.entries(seeds)) {\n      const full = await this.safe(path);\n      await writeFile(full, content, {flag:'wx',mode:0o600}).catch(e => { if(e.code !== 'EEXIST') throw e; });\n    }\n    await writeFile(join(this.root,'.obsidian/app.json'),JSON.stringify({alwaysUpdateLinks:true,newLinkFormat:'shortest',useMarkdownLinks:false},null,2),{flag:'wx',mode:0o600}).catch(e=>{if(e.code!=='EEXIST')throw e;});\n    await atomic(marker,'Vault initialized. Starter notes are never recreated automatically after this point.\\n');\n  }\n  async safe(path, internal = false) {\n    if (typeof path !== 'string' || !path || path.length > 220 || path.includes('\\\\') || /[\\x00-\\x1f]/.test(path) || path.startsWith('/') || !path.endsWith('.md')) throw new AppError('Choose a relative Markdown note path.');\n    const parts = path.split('/');\n    if(parts.some(p => !p || p === '..' || p === '.' || (!internal && p.startsWith('.')))) throw new AppError('That path is outside the note vault.');\n    let current = this.root;\n    for (const part of parts) {\n      current = join(current,part);\n      try { if((await lstat(current)).isSymbolicLink()) throw new AppError('Symbolic links are not supported in the vault.'); }\n      catch(e) { if(e.code !== 'ENOENT') throw e; }\n    }\n    return current;\n  }\n  exclusive(fn) { const work = this.queue.then(fn); this.queue = work.catch(() => {}); return work; }\n  async read(path) {\n    const full = await this.safe(path);\n    try {\n      const stat = await lstat(full);\n      if(!stat.isFile() || stat.size > 1024 * 512) throw new AppError('Notes must be text files smaller than 512 KB.');\n      return parseNote(path, await readFile(full,'utf8'));\n    } catch(e) { if(e.code === 'ENOENT') throw new AppError('Note not found.',404); throw e; }\n  }\n  async list() { return viewList(this,'notes',()=>this.readList()); }\n  async readList() {\n    const notes = [];\n    const walk = async (dir, depth=0) => {\n      if(depth > 12) return;\n      for(const ent of await readdir(join(this.root,dir),{withFileTypes:true})) {\n        if(ent.name.startsWith('.') || ent.isSymbolicLink()) continue;\n        const path = dir ? `${dir}/${ent.name}` : ent.name;\n        if(ent.isDirectory()) await walk(path, depth+1);\n        else if(ent.isFile() && ent.name.endsWith('.md')) { try { notes.push(await this.read(path)); } catch(e) { if(![400,404].includes(e.status)) throw e; } }\n      }\n    };\n    await walk(''); return notes.sort((a,b) => a.path.localeCompare(b.path));\n  }\n  async save(path, content, revision, {beforeCommit,taskSource} = {}) {\n    return freshReads(()=>this.exclusive(async () => {\n      if(typeof content !== 'string' || Buffer.byteLength(content) > 512*1024) throw new AppError('A note must be text smaller than 512 KB.');\n      const full = await this.safe(path);\n      let old; try { old = await this.read(path); } catch(e) { if(e.status !== 404) throw e; }\n      if(old ? revision !== old.revision : revision != null) throw new AppError('This note changed outside this editor. Your draft is kept. Reload the note and merge your changes.',409);\n      if(old && old.content !== content) await this.snapshot(old);\n      const tracked=this.taskHistory&&(tasksIn(old?[old]:[]).length||tasksIn([parseNote(path,content)]).length);\n      const receipt=tracked?await this.taskHistory.prepare(path,content,taskSource):null;\n      await atomic(full,content,{beforeCommit:async()=>{let latest;try{latest=await this.read(path);}catch(e){if(e.status!==404)throw e;}if((latest?.revision??null)!==(old?.revision??null))throw new AppError('The note changed during saving. Refresh before retrying.',409);await beforeCommit?.();}});\n      if(receipt)try{await this.taskHistory.committed(receipt);}catch(e){throw new AppError('The note was saved, but its task-history receipt is pending. Refresh task history before retrying. '+e.message,503);}\n      return parseNote(path,content);\n    }));\n  }\n  async snapshot(note) {\n    const historyPath = `.aster/history/${sha(note.path)}/${Date.now()}-${randomUUID()}.md`;\n    const full = await this.safe(historyPath,true);\n    await atomic(full,note.content);\n  }\n  async history(path) {\n    await this.safe(path);\n    const dir = join(this.root,'.aster/history',sha(path));\n    const entries = await readdir(dir).catch(e=>{if(e.code==='ENOENT')return [];throw e;});\n    return entries.filter(e=>/^\\d+-[\\w-]+\\.md$/.test(e)).sort().reverse();\n  }\n  async version(path, id) {\n    if(!/^\\d+-[\\w-]+\\.md$/.test(id)) throw new AppError('Invalid version.');\n    await this.safe(path);\n    return readFile(await this.safe(`.aster/history/${sha(path)}/${id}`,true),'utf8');\n  }\n  async trash(path, revision) {\n    return freshReads(()=>this.exclusive(async()=>{\n      const note = await this.read(path);\n      if(note.revision !== revision) throw new AppError('The note changed. Reload before moving it to trash.',409);\n      await this.snapshot(note);\n      const trashPath = `.aster/trash/${Date.now()}-${randomUUID()}-${basename(path)}`;\n      const receipt=tasksIn([note]).length?await this.taskHistory?.prepare(path,null):null;\n      await rename(await this.safe(path),await this.safe(trashPath,true));\n      if(receipt)try{await this.taskHistory.committed(receipt);}catch(e){throw new AppError('The note was moved to trash, but its task-history receipt is pending. Refresh task history. '+e.message,503);}\n      return {trashed: path, recovery: trashPath};\n    }));\n  }\n  async daily() {\n    const path = `50 Daily/${today()}.md`;\n    try { return await this.read(path); } catch(e) { if(e.status!==404) throw e; }\n    return this.save(path, markdown(today(),'## Focus\\n\\nWhat matters most today?\\n\\n## Notes\\n\\n\\n## Reflection\\n\\nRelated: [[Tasks]]',{kind:'daily',status:'confirmed'}),null);\n  }\n  async tasks() { return tasksIn(await this.list()); }\n  async addTask(text,options={}) {\n    const line=taskLine(text,options);let n;\n    try{n=await this.read('40 Tasks/Tasks.md');}catch(e){if(e.status!==404)throw e;n={path:'40 Tasks/Tasks.md',content:markdown('Tasks','## Tasks',{kind:'tasks',status:'confirmed'}),revision:null};}\n    const content=`${n.content.trimEnd()}\\n- [ ] ${line}\\n`;\n    const verify=async()=>{const notes=await this.list(),next=parseNote(n.path,content),tasks=tasksIn([...notes.filter(x=>x.path!==n.path),next]),task=tasksIn([next]).at(-1);validateTaskLinks(tasks,task,notes);};\n    await verify();return this.save(n.path,content,n.revision,{beforeCommit:verify});\n  }\n  async scheduleTask({path,line,revision,requireReady=false,...changes}) {\n    const n=await this.read(path);if(n.revision!==revision)throw new AppError('Tasks changed. Close this editor and reopen the task to review its current schedule.',409);\n    const task=tasksIn([n]).find(t=>t.line===line);if(!task)throw new AppError('Task not found.',404);\n    if(task.scheduleError)throw new AppError('This task has invalid scheduling metadata. Fix it in the Markdown note first.');\n    const lines=n.content.split('\\n');lines[line]=lines[line].replace(/^(\\s*[-*] \\[[ xX]\\] ).+$/,(_,prefix)=>prefix+taskLine(changes.text??task.text,{...task,...changes},task.id||undefined));\n    const content=lines.join('\\n'),changed=['project','parent','dependsOn'].some(k=>Object.hasOwn(changes,k)&&JSON.stringify(changes[k]??null)!==JSON.stringify(task[k]??null));\n    const verify=async()=>{const notes=await this.list(),next=parseNote(path,content),tasks=tasksIn([...notes.filter(x=>x.path!==path),next]),after=tasksIn([next]).find(t=>t.line===line);validateTaskLinks(tasks,after,notes,{changed,requireReady});};\n    await verify();return this.save(path,content,revision,{beforeCommit:verify});\n  }\n  async toggleTask(path,line,revision,done) {\n    const n=await this.read(path); if(n.revision!==revision) throw new AppError('Tasks changed. Refresh and try again.',409);\n    const lines=n.content.split('\\n');\n    if(!Number.isInteger(line) || !/^\\s*[-*] \\[[ xX]\\] /.test(lines[line]||'') || typeof done!=='boolean') throw new AppError('Task not found.');\n    lines[line]=lines[line].replace(/\\[[ xX]\\]/,done?'[x]':'[ ]');\n    return this.save(path,lines.join('\\n'),revision);\n  }\n}\n\nconst stop = new Set('the a an to of and or is are my me i you your what how do does can could would should please about with for from in on it this that tell help want need remember'.split(' '));\nexport const tokens = value => String(value).toLocaleLowerCase().normalize('NFKC').match(/[\\p{L}\\p{N}][\\p{L}\\p{N}_-]*/gu)?.filter(t => !stop.has(t)) || [];\nexport function chunks(text,size=1600){\n  const out=[];for(let i=0;i<text.length;i+=size-160)out.push(text.slice(i,i+size));return out.length?out:[''];\n}\nexport function resolveLink(link, notes, from='') {\n  const clean = link.replace(/\\.md$/i,'');\n  const exact = notes.find(n => n.path.slice(0,-3).toLowerCase()===clean.toLowerCase());\n  if(exact) return exact.path;\n  const relative = posix.normalize(posix.join(posix.dirname(from),clean));\n  const same = notes.find(n=>n.path.slice(0,-3).toLowerCase()===relative.toLowerCase());\n  if(same) return same.path;\n  const matches = notes.filter(n=>basename(n.path,'.md').toLowerCase()===clean.toLowerCase() || n.title.toLowerCase()===clean.toLowerCase() || n.aliases?.some(a=>a.toLowerCase()===clean.toLowerCase()));\n  return matches.length===1 ? matches[0].path : null;\n}\nexport function retrieve(notes, query, limit=7, budget=14000, semantic=new Map()) {\n  const available=notes.filter(n=>n.kind!=='memory-correction' && !['draft','journal','archived'].includes(n.status) && !n.path.startsWith('99 Archive/')&&!n.path.startsWith('70 Skills/'));\n  const terms=[...new Set(tokens(query))];\n  const docs=available.map(n=>({n,words:tokens(`${n.title} ${n.tags.join(' ')} ${n.body}`)}));\n  const avg=docs.reduce((a,d)=>a+d.words.length,0)/Math.max(1,docs.length);\n  const scored=docs.map(({n,words})=>{\n    let score=0;\n    for(const t of terms) {\n      const tf=words.filter(w=>w===t).length;\n      const df=docs.filter(d=>d.words.includes(t)).length;\n      const idf=Math.log(1+(docs.length-df+0.5)/(df+0.5));\n      score+=idf*tf*2.2/(tf+1.2*(0.25+0.75*words.length/(avg||1)));\n      if(tokens(n.title).includes(t)) score+=2;\n      if(n.tags.includes(t)) score+=1.5;\n    }\n    const meaning=semantic.get(n.path);\n    if(meaning?.score>0.3)score+=(meaning.score-0.3)*12;\n    return {...n,score,semantic:meaning};\n  }).sort((a,b)=>b.score-a.score || a.path.localeCompare(b.path));\n  const chosen=[...scored.filter(n=>n.pinned),...scored.filter(n=>!n.pinned&&n.score>0).slice(0,limit)];\n  for(const n of [...chosen]) for(const link of n.links) {\n    const path=resolveLink(link,available,n.path);\n    const next=scored.find(x=>x.path===path);\n    if(next && chosen.length<limit+2 && !chosen.some(x=>x.path===path)) chosen.push({...next,linked:true});\n  }\n  let remaining=budget;\n  return chosen.filter((n,i,a)=>a.findIndex(x=>x.path===n.path)===i).slice(0,limit+2).flatMap(n=>{\n    if(remaining<100) return [];\n    const ranked=chunks(n.body,1000).map((text,index)=>({text,index,score:terms.reduce((s,t)=>s+tokens(text).filter(w=>w===t).length,0)})).sort((a,b)=>b.score-a.score||a.index-b.index);\n    const excerpt=(n.body.length<=2200?n.body:n.semantic?.score>0.3?n.semantic.text:ranked.slice(0,2).sort((a,b)=>a.index-b.index).map(c=>c.text).join('\\n[…]\\n')).slice(0,Math.min(2400,remaining));\n    remaining-=excerpt.length;\n    return [{path:n.path,title:n.title,excerpt,revision:n.revision,source:n.source,pinned:n.pinned,linked:!!n.linked,status:n.status,score:n.score}];\n  }).map((n,i)=>({...n,id:`M${i+1}`}));\n}\n",
+          "revision": "6782a32a0118f5231270860858d670303262e19b5f9d75298b89b824e4900fa0",
+          "offset": 0,
+          "totalCharacters": 17971,
+          "nextOffset": null,
+          "truncated": false
+        },
+        "finished": "2026-11-07T21:03:47.879Z"
+      },
+      {
+        "id": "65d2600c-36ce-4ff1-8314-ab979b4166b9",
+        "step": "b7acb13a-58b1-4456-aa20-fb02430535c8",
+        "revision": 1,
+        "name": "read_system_file",
+        "arguments": {
+          "path": "/tmp/aurora-workspace-live-bcDC2M/project/tests/quick-window.test.mjs"
+        },
+        "status": "completed",
+        "started": "2026-11-07T21:03:57.376Z",
+        "result": {
+          "path": "/tmp/aurora-workspace-live-bcDC2M/project/tests/quick-window.test.mjs",
+          "content": "import test from 'node:test';\nimport assert from 'node:assert/strict';\nimport {mkdtemp,rm,writeFile} from 'node:fs/promises';\nimport {tmpdir} from 'node:os';\nimport {join} from 'node:path';\nimport {QuickWindowSettings,quickBounds} from '../desktop/quick-window.mjs';\nimport {monitorArea} from '../desktop/placement.mjs';\n\ntest('Quick ask restores independent geometry and clamps it after a monitor disappears',async t=>{\n  const dir=await mkdtemp(join(tmpdir(),'aurora-quick-layout-'));t.after(()=>rm(dir,{recursive:true,force:true}));\n  const file=join(dir,'quick-window.json'),settings=new QuickWindowSettings(file);await settings.init();\n  await settings.remember({x:2040,y:-900,width:700,height:900},'external');\n  const restarted=new QuickWindowSettings(file);await restarted.init();assert.deepEqual(restarted.value,settings.value);\n  const area={x:-1280,y:30,width:1280,height:690};assert.deepEqual(quickBounds(restarted.value,area),{x:-700,y:30,width:700,height:690});\n  await writeFile(file,JSON.stringify({width:99999,height:-12,position:{x:'wrong',y:0}}));\n  const invalid=new QuickWindowSettings(file);await invalid.init();assert.deepEqual(invalid.value,{width:460,height:680,position:null});\n});\ntest('placement uses scaled, rotated monitor work areas and fits small screens',()=>{\n  const area=monitorArea({x:-1000,y:0,width:1920,height:1080,scale:1.5,transform:1,reserved:[10,30,10,20]});\n  assert.deepEqual(area,{x:-990,y:30,width:700,height:1230});\n  assert.deepEqual(quickBounds({width:460,height:680,position:null},{x:0,y:0,width:320,height:350}),{x:0,y:0,width:320,height:350});\n});\n",
+          "revision": "d86a1ab111b7a03d06f294c6e140165227deee7ce1fe5a1485803cb4b7c57bdc",
+          "offset": 0,
+          "totalCharacters": 1602,
+          "nextOffset": null,
+          "truncated": false
+        },
+        "finished": "2026-11-07T21:03:57.377Z"
+      },
+      {
+        "id": "b8c52db5-5466-4916-aebc-71f08b30d5f4",
+        "step": "b7acb13a-58b1-4456-aa20-fb02430535c8",
+        "revision": 1,
+        "name": "read_system_file",
+        "arguments": {
+          "path": "/tmp/aurora-workspace-live-bcDC2M/project/desktop/quick-window.mjs"
+        },
+        "readGroup": {
+          "id": "ebd7d9d9-56ad-49a6-90de-7c10b8635098",
+          "index": 0,
+          "total": 2
+        },
+        "status": "completed",
+        "started": "2026-11-07T21:04:07.836Z",
+        "result": {
+          "path": "/tmp/aurora-workspace-live-bcDC2M/project/desktop/quick-window.mjs",
+          "content": "import {readFile} from 'node:fs/promises';\nimport {atomic} from '../src/vault.mjs';\n\nexport function quickBounds(value,area){\n  const width=Math.max(value.width,area.width),height=Math.min(value.height,area.height);\n  const x=Number.isFinite(value.position?.x)?value.position.x:area.x+(area.width-width)/2;\n  const y=Number.isFinite(value.position?.y)?value.position.y:area.y+(area.height-height)/2;\n  return {width,height,x:Math.round(Math.max(area.x,Math.min(x,area.x+area.width-width))),y:Math.round(Math.max(area.y,Math.min(y,area.y+area.height-height)))};\n}\nexport class QuickWindowSettings{\n  constructor(file){this.file=file;this.value={width:460,height:680,position:null};this.queue=Promise.resolve();}\n  async init(){\n    try{const v=JSON.parse(await readFile(this.file,'utf8'));\n      for(const [key,min] of [['width',340],['height',360]])if(Number.isInteger(v[key])&&v[key]>=min&&v[key]<=8000)this.value[key]=v[key];\n      if(v.position&&['x','y'].every(k=>Number.isFinite(v.position[k])&&Math.abs(v.position[k])<100000))this.value.position={x:v.position.x,y:v.position.y,monitor:String(v.position.monitor||'').slice(0,100)};\n    }catch(e){if(e.code!=='ENOENT'&&!(e instanceof SyntaxError))throw e;}\n  }\n  async remember(bounds,monitor=''){\n    const next={width:Math.round(bounds.width),height:Math.round(bounds.height),position:{x:Math.round(bounds.x),y:Math.round(bounds.y),monitor}};\n    if(JSON.stringify(next)===JSON.stringify(this.value))return;\n    this.value=next;const content=JSON.stringify(next);\n    const job=this.queue.then(()=>atomic(this.file,content));this.queue=job.catch(()=>{});await job;\n  }\n}\n",
+          "revision": "e9ae399f357a5eb9d114d6f6dcb567cde1a4d02edcdcf8c4e0fc0d9fd8875d93",
+          "offset": 0,
+          "totalCharacters": 1627,
+          "nextOffset": null,
+          "truncated": false
+        },
+        "finished": "2026-11-07T21:04:07.842Z"
+      },
+      {
+        "id": "35cf6681-0998-4dd6-861e-61bc1692af43",
+        "step": "b7acb13a-58b1-4456-aa20-fb02430535c8",
+        "revision": 1,
+        "name": "read_system_file",
+        "arguments": {
+          "path": "/tmp/aurora-workspace-live-bcDC2M/project/desktop/placement.mjs"
+        },
+        "readGroup": {
+          "id": "ebd7d9d9-56ad-49a6-90de-7c10b8635098",
+          "index": 1,
+          "total": 2
+        },
+        "status": "completed",
+        "started": "2026-11-07T21:04:07.843Z",
+        "result": {
+          "path": "/tmp/aurora-workspace-live-bcDC2M/project/desktop/placement.mjs",
+          "content": "import {execFile} from 'node:child_process';\nimport {promisify} from 'node:util';\nconst run=promisify(execFile);\nexport const hyprland=!!(process.env.WAYLAND_DISPLAY&&process.env.HYPRLAND_INSTANCE_SIGNATURE);\n\nexport function monitorArea(m){\n  const rotated=m.transform%2===1;\n  const width=Math.round((rotated?m.height:m.width)/m.scale),height=Math.round((rotated?m.width:m.height)/m.scale);\n  const [left,top,right,bottom]=m.reserved||[0,0,0,0];\n  return {x:m.x+left,y:m.y+top,width:width+left+right,height:height-top-bottom};\n}\nexport async function desktopWindow(title){\n  const {stdout}=await run('hyprctl',['clients','-j'],{timeout:1500,maxBuffer:1024*1024});\n  const client=JSON.parse(stdout).find(c=>c.pid===process.pid&&c.title===title&&c.floating);\n  if(!client||!/^0x[0-9a-f]+$/i.test(client.address))return null;\n  const {stdout:monitors}=await run('hyprctl',['monitors','-j'],{timeout:1500,maxBuffer:1024*1024});\n  const displays=JSON.parse(monitors),monitor=displays.find(m=>m.id===client.monitor);\n  if(!monitor)return null;\n  return {client,monitor,displays,bounds:{x:client.at[0],y:client.at[1],width:client.size[0],height:client.size[1]}};\n}\nexport async function placeDesktopWindow(client,title,{x,y,width,height}){\n  // An address alone can be recycled. Check our PID and exact title again in the compositor.\n  const code=`local w=hl.get_window(\"address:${client.address}\"); if w and w.pid==${process.pid} and w.title==${JSON.stringify(title)} then hl.dispatch(hl.dsp.window.resize({x=${width},y=${height},window=w})); hl.dispatch(hl.dsp.window.move({x=${x},y=${y},window=w})); end`;\n  await run('hyprctl',['eval',code],{timeout:1500,maxBuffer:16384});\n}\n",
+          "revision": "0ad517f3b9c8c4db93a155be32e00077ebe0067da488699bbecb01e76b9d5244",
+          "offset": 0,
+          "totalCharacters": 1675,
+          "nextOffset": null,
+          "truncated": false
+        },
+        "finished": "2026-11-07T21:04:07.845Z"
+      },
+      {
+        "id": "441e09b0-e900-405b-8c8d-d7d3f1ac3e04",
+        "step": "b7acb13a-58b1-4456-aa20-fb02430535c8",
+        "revision": 1,
+        "name": "read_system_file",
+        "arguments": {
+          "path": "/tmp/aurora-workspace-live-bcDC2M/project/tests/quick-window.test.mjs"
+        },
+        "status": "completed",
+        "started": "2026-11-07T21:04:17.001Z",
+        "result": {
+          "path": "/tmp/aurora-workspace-live-bcDC2M/project/tests/quick-window.test.mjs",
+          "content": "import test from 'node:test';\nimport assert from 'node:assert/strict';\nimport {mkdtemp,rm,writeFile} from 'node:fs/promises';\nimport {tmpdir} from 'node:os';\nimport {join} from 'node:path';\nimport {QuickWindowSettings,quickBounds} from '../desktop/quick-window.mjs';\nimport {monitorArea} from '../desktop/placement.mjs';\n\ntest('Quick ask restores independent geometry and clamps it after a monitor disappears',async t=>{\n  const dir=await mkdtemp(join(tmpdir(),'aurora-quick-layout-'));t.after(()=>rm(dir,{recursive:true,force:true}));\n  const file=join(dir,'quick-window.json'),settings=new QuickWindowSettings(file);await settings.init();\n  await settings.remember({x:2040,y:-900,width:700,height:900},'external');\n  const restarted=new QuickWindowSettings(file);await restarted.init();assert.deepEqual(restarted.value,settings.value);\n  const area={x:-1280,y:30,width:1280,height:690};assert.deepEqual(quickBounds(restarted.value,area),{x:-700,y:30,width:700,height:690});\n  await writeFile(file,JSON.stringify({width:99999,height:-12,position:{x:'wrong',y:0}}));\n  const invalid=new QuickWindowSettings(file);await invalid.init();assert.deepEqual(invalid.value,{width:460,height:680,position:null});\n});\ntest('placement uses scaled, rotated monitor work areas and fits small screens',()=>{\n  const area=monitorArea({x:-1000,y:0,width:1920,height:1080,scale:1.5,transform:1,reserved:[10,30,10,20]});\n  assert.deepEqual(area,{x:-990,y:30,width:700,height:1230});\n  assert.deepEqual(quickBounds({width:460,height:680,position:null},{x:0,y:0,width:320,height:350}),{x:0,y:0,width:320,height:350});\n});\n",
+          "revision": "d86a1ab111b7a03d06f294c6e140165227deee7ce1fe5a1485803cb4b7c57bdc",
+          "offset": 0,
+          "totalCharacters": 1602,
+          "nextOffset": null,
+          "truncated": false
+        },
+        "finished": "2026-11-07T21:04:17.003Z"
+      },
+      {
+        "id": "d5e694f0-8d41-4af0-85dc-75f1487bb51a",
+        "step": "b7acb13a-58b1-4456-aa20-fb02430535c8",
+        "revision": 1,
+        "name": "check_repair_expression",
+        "arguments": {
+          "cases": [
+            {
+              "expected": 700,
+              "inputs": {
+                "area.width": 1280,
+                "value.width": 700
+              }
+            },
+            {
+              "expected": 320,
+              "inputs": {
+                "area.width": 320,
+                "value.width": 460
+              }
+            }
+          ],
+          "repair": "R4.1"
+        },
+        "status": "completed",
+        "started": "2026-11-07T21:04:27.284Z",
+        "result": {
+          "repair": "R4.1",
+          "path": "/tmp/aurora-workspace-live-bcDC2M/project/desktop/quick-window.mjs",
+          "line": 5,
+          "sourceRevision": "e9ae399f357a5eb9d114d6f6dcb567cde1a4d02edcdcf8c4e0fc0d9fd8875d93",
+          "sourceEvidence": "E12",
+          "before": "Math.max(value.width,area.width)",
+          "after": "Math.min(value.width,area.width)",
+          "binding": "saved_expression",
+          "requiredInputs": [
+            "value.width",
+            "area.width"
+          ],
+          "introducedInputs": [],
+          "cases": [
+            {
+              "inputs": {
+                "area.width": 1280,
+                "value.width": 700
+              },
+              "expected": 700,
+              "before": {
+                "value": 1280
+              },
+              "after": {
+                "value": 700
+              },
+              "matches": true
+            },
+            {
+              "inputs": {
+                "area.width": 320,
+                "value.width": 460
+              },
+              "expected": 320,
+              "before": {
+                "value": 460
+              },
+              "after": {
+                "value": 320
+              },
+              "matches": true
+            }
+          ],
+          "caseCount": 2,
+          "matched": 2,
+          "examplesMatch": true,
+          "notice": "Model-supplied examples only: expected values and inputs need review against the user goal and tests. Introduced inputs are names absent from the old expression, not a scope analysis; inspect their initialization in the source. This checks arithmetic for the exact replacement, not units, whole-program behavior or complete correctness. No file was changed. Exact approval, saved tests and fresh readback still apply."
+        },
+        "finished": "2026-11-07T21:04:27.288Z"
+      },
+      {
+        "id": "2763f4f1-75dc-404b-98ae-f1521bce5aa1",
+        "step": "b7acb13a-58b1-4456-aa20-fb02430535c8",
+        "revision": 1,
+        "name": "check_repair_expression",
+        "arguments": {
+          "cases": [
+            {
+              "expected": 700,
+              "inputs": {
+                "left": 10,
+                "right": 10,
+                "width": 720
+              }
+            }
+          ],
+          "repair": "R4.2"
+        },
+        "status": "completed",
+        "started": "2026-11-07T21:04:35.707Z",
+        "result": {
+          "repair": "R4.2",
+          "path": "/tmp/aurora-workspace-live-bcDC2M/project/desktop/placement.mjs",
+          "line": 10,
+          "sourceRevision": "0ad517f3b9c8c4db93a155be32e00077ebe0067da488699bbecb01e76b9d5244",
+          "sourceEvidence": "E13",
+          "before": "width+left+right",
+          "after": "width-left-right",
+          "binding": "saved_expression",
+          "requiredInputs": [
+            "width",
+            "left",
+            "right"
+          ],
+          "introducedInputs": [],
+          "cases": [
+            {
+              "inputs": {
+                "left": 10,
+                "right": 10,
+                "width": 720
+              },
+              "expected": 700,
+              "before": {
+                "value": 740
+              },
+              "after": {
+                "value": 700
+              },
+              "matches": true
+            }
+          ],
+          "caseCount": 1,
+          "matched": 1,
+          "examplesMatch": true,
+          "notice": "Model-supplied examples only: expected values and inputs need review against the user goal and tests. Introduced inputs are names absent from the old expression, not a scope analysis; inspect their initialization in the source. This checks arithmetic for the exact replacement, not units, whole-program behavior or complete correctness. No file was changed. Exact approval, saved tests and fresh readback still apply."
+        },
+        "finished": "2026-11-07T21:04:35.709Z"
+      }
+    ],
+    "calls": 13,
+    "activeMs": 140828,
+    "error": "Workflow paused: The complete project goal, requirements and tool context exceed the local input budget. Narrow the task or its requirements; no contract text or action was silently dropped.",
+    "activity": {
+      "phase": "reasoning",
+      "since": "2026-11-07T21:04:35.710Z"
+    },
+    "needsPlan": false,
+    "planApprovedAt": "2026-11-07T21:02:14.907Z",
+    "pauseReason": {
+      "kind": "error",
+      "at": "2026-11-07T21:04:35.722Z"
+    },
+    "memorySources": [
+      {
+        "path": "10 Profile/Assistant preferences.md",
+        "title": "Assistant preferences",
+        "excerpt": "\n# Assistant preferences\n\nHelp with everyday life, projects, learning, writing, and planning. Give practical next steps. Separate known facts from suggestions. Ask when important context is missing. Use my saved notes when relevant and cite the notes you used.\n\nMemory should be transparent and portable.\n\nRelated: [[About me]]\n",
+        "revision": "58efbe41068d9145709780706d72b4773a1736fa68d4fb35963ab8492453bf5b",
+        "source": "",
+        "pinned": true,
+        "linked": false,
+        "status": "confirmed",
+        "score": 5.6176711643231245,
+        "id": "M1"
+      },
+      {
+        "path": "10 Profile/About me.md",
+        "title": "About me",
+        "excerpt": "\n# About me\n\nThis profile note is a template. Add details you want Aurora to remember.\n\n## Add your own context\n\nAdd your preferred name, current goals, interests, and constraints here when you are ready.\n\nRelated: [[Assistant preferences]]\n",
+        "revision": "cb8c6bd8a630360772a8106d31e2e7e046becbb820f0a8430b1e150ffec20131",
+        "source": "",
+        "pinned": true,
+        "linked": false,
+        "status": "confirmed",
+        "score": 0.9814489155953963,
+        "id": "M2"
+      },
+      {
+        "path": "20 Projects/Example Project.md",
+        "title": "Example Project",
+        "excerpt": "\n# Example Project\n\nThis is a placeholder project note. Add your own project details here.\n\nProject directory: configure locally.\n\nReview project files before making specific claims.\n",
+        "revision": "3c0ceaa8f43c10db0f6c48ad14e2f91ef59d4b44235da754b7cb2e71966080ff",
+        "source": "",
+        "pinned": false,
+        "linked": false,
+        "status": "reference",
+        "score": 2.8921093816382974,
+        "id": "M3"
+      },
+      {
+        "path": "00 Home/Start here.md",
+        "title": "Start here",
+        "excerpt": "\n# Start here\n\nThis is your personal memory vault. Open this folder as a vault in Obsidian, or edit notes in Aurora.\n\n- [[10 Profile/About me|About me]] — preferences and context you want remembered\n- [[10 Profile/Assistant preferences|Assistant preferences]]\n- [[20 Projects/Example Project|Example Project]]\n- [[40 Tasks/Tasks|Tasks]]\n\nUse **Remember** for a fact, **New note** for knowledge, and **Today** for a daily note. Link notes with `[[note name]]`. Chat journals are history, not confirmed facts. Proposed memories are excluded from recall until you approve them.\n\nPinned notes are included in every conversation. Avoid putting passwords or tokens in your memory.\n",
+        "revision": "0bedcd75619bc4e2f8fd619cb103b9306fc9ca34f29306d83098f40fed8b8869",
+        "source": "",
+        "pinned": false,
+        "linked": false,
+        "status": "reference",
+        "score": 1.7719308439173755,
+        "id": "M4"
+      },
+      {
+        "path": "40 Tasks/Tasks.md",
+        "title": "Tasks",
+        "excerpt": "\n# Tasks\n\nCapture an actionable next step here, or use the task input in Aurora.\n\n## Tasks\n",
+        "revision": "54cd05574867a73f7d6ec8ad55bbecd423e46a06bc07e8873dddd45e1186b846",
+        "source": "",
+        "pinned": false,
+        "linked": false,
+        "status": "confirmed",
+        "score": 0.40206839793809035,
+        "id": "M5"
+      }
+    ],
+    "memoryRevision": 1,
+    "inputUsage": [
+      {
+        "call": 1,
+        "bytes": 14991
+      },
+      {
+        "call": 2,
+        "bytes": 22203
+      },
+      {
+        "call": 3,
+        "bytes": 23339
+      },
+      {
+        "call": 4,
+        "bytes": 23422
+      },
+      {
+        "call": 5,
+        "bytes": 23339
+      },
+      {
+        "call": 6,
+        "bytes": 23222
+      },
+      {
+        "call": 7,
+        "bytes": 23672
+      },
+      {
+        "call": 8,
+        "bytes": 23839
+      },
+      {
+        "call": 9,
+        "bytes": 23893
+      },
+      {
+        "call": 10,
+        "bytes": 23988
+      },
+      {
+        "call": 11,
+        "bytes": 23903
+      },
+      {
+        "call": 12,
+        "bytes": 23704
+      }
+    ],
+    "localUsage": [
+      {
+        "at": "2026-11-07T21:02:24.139Z",
+        "stage": "step",
+        "model": "qwen3.5:9b",
+        "tokens": 268,
+        "promptTokens": 3343,
+        "seconds": 9.2,
+        "thinking": true,
+        "doneReason": "stop"
+      },
+      {
+        "at": "2026-11-07T21:02:49.125Z",
+        "stage": "step",
+        "model": "qwen3.5:9b",
+        "tokens": 813,
+        "promptTokens": 5720,
+        "seconds": 25,
+        "thinking": true,
+        "doneReason": "stop"
+      },
+      {
+        "at": "2026-11-07T21:02:59.701Z",
+        "stage": "step",
+        "model": "qwen3.5:9b",
+        "tokens": 228,
+        "promptTokens": 5925,
+        "seconds": 10.6,
+        "thinking": true,
+        "doneReason": "stop"
+      },
+      {
+        "at": "2026-11-07T21:03:08.379Z",
+        "stage": "step",
+        "model": "qwen3.5:9b",
+        "tokens": 158,
+        "promptTokens": 5914,
+        "seconds": 8.7,
+        "thinking": true,
+        "doneReason": "stop"
+      },
+      {
+        "at": "2026-11-07T21:03:29.603Z",
+        "stage": "step",
+        "model": "qwen3.5:9b",
+        "tokens": 649,
+        "promptTokens": 5925,
+        "seconds": 21.2,
+        "thinking": true,
+        "doneReason": "stop"
+      },
+      {
+        "at": "2026-11-07T21:03:40.903Z",
+        "stage": "step",
+        "model": "qwen3.5:9b",
+        "tokens": 264,
+        "promptTokens": 5855,
+        "seconds": 11.3,
+        "thinking": true,
+        "doneReason": "stop"
+      },
+      {
+        "at": "2026-11-07T21:03:47.877Z",
+        "stage": "step",
+        "model": "qwen3.5:9b",
+        "tokens": 91,
+        "promptTokens": 5869,
+        "seconds": 7,
+        "thinking": true,
+        "doneReason": "stop"
+      },
+      {
+        "at": "2026-11-07T21:03:57.376Z",
+        "stage": "step",
+        "model": "qwen3.5:9b",
+        "tokens": 190,
+        "promptTokens": 6045,
+        "seconds": 9.5,
+        "thinking": true,
+        "doneReason": "stop"
+      },
+      {
+        "at": "2026-11-07T21:04:07.836Z",
+        "stage": "step",
+        "model": "qwen3.5:9b",
+        "tokens": 225,
+        "promptTokens": 6095,
+        "seconds": 10.4,
+        "thinking": true,
+        "doneReason": "stop"
+      },
+      {
+        "at": "2026-11-07T21:04:17.001Z",
+        "stage": "step",
+        "model": "qwen3.5:9b",
+        "tokens": 173,
+        "promptTokens": 6128,
+        "seconds": 9.1,
+        "thinking": true,
+        "doneReason": "stop"
+      },
+      {
+        "at": "2026-11-07T21:04:27.284Z",
+        "stage": "step",
+        "model": "qwen3.5:9b",
+        "tokens": 214,
+        "promptTokens": 6105,
+        "seconds": 10.3,
+        "thinking": true,
+        "doneReason": "stop"
+      },
+      {
+        "at": "2026-11-07T21:04:35.707Z",
+        "stage": "step",
+        "model": "qwen3.5:9b",
+        "tokens": 150,
+        "promptTokens": 5970,
+        "seconds": 8.4,
+        "thinking": true,
+        "doneReason": "stop"
+      }
+    ],
+    "projectToolGroup": "project"
+  }
+}

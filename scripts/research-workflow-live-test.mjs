@@ -1,0 +1,40 @@
+import {statesUnknownMigration} from './research-output-checks.mjs';
+import assert from 'node:assert/strict';
+import {mkdtemp,mkdir,readFile,writeFile,rm} from 'node:fs/promises';
+import {join} from 'node:path';
+import {tmpdir} from 'node:os';
+import {createApp} from '../src/server.mjs';
+import {Ollama} from '../src/ollama.mjs';
+
+const sourceReview=process.env.AURORA_RESEARCH_SOURCE_REVIEW==='1',contentRequirements=sourceReview||process.env.AURORA_RESEARCH_REQUIRED_TEXT==='1';
+const draftCritique=sourceReview&&process.env.AURORA_DRAFT_CRITIQUE==='1';
+const reports=[],runId=new Date().toISOString().replaceAll(/[:.]/g,'-');
+for(let round=1;round<=Number(process.env.AURORA_RESEARCH_ROUNDS||2);round++){
+ const dir=await mkdtemp(join(tmpdir(),'aurora-research-live-')),project=join(dir,'sources'),data=join(dir,'data');await mkdir(project);await mkdir(data);await writeFile(join(data,'models.json'),JSON.stringify({model:'qwen3.5:9b',thinking:true}));
+ const sources=[
+  {name:'requirements.md',quote:'The monthly budget ceiling is 120 credits.',text:'The owner needs offline editing and portable Markdown export. The monthly budget ceiling is 120 credits.'},
+  {name:'orion-quote.md',quote:'Orion costs 140 credits per month.',text:'Vendor quote for this trimester: Orion costs 140 credits per month. Orion offers offline editing and Markdown export.'},
+  {name:'orion-catalog.md',quote:'Orion costs 110 credits per month.',text:'Vendor catalog for the same trimester: Orion costs 110 credits per month. This conflicts with the quote. No source establishes which price is current.'},
+  {name:'vega-catalog.md',quote:'Vega costs 90 credits per month.',text:'Vega costs 90 credits per month. Vega exports Markdown but requires an internet connection for editing. No source supplies migration duration.'}
+ ];
+ for(const s of sources)await writeFile(join(project,s.name),'# '+s.name+'\n\n'+s.text+'\n');
+ const target=join(project,'decision.md'),app=await createApp({vault:join(dir,'vault'),data,backups:join(dir,'backups'),ollamaClient:new Ollama('http://127.0.0.1:11434','qwen3.5:9b'),embedding:'',projects:[]});
+ const allowed=app.system.allowed.bind(app.system);app.system.allowed=path=>{assert(path===project||path.startsWith(project+'/'),'Only disposable source folder access');return allowed(path);};
+ let record,id,approvals=0,planReviews=0;const started=Date.now();
+ try{
+  const w=await app.workflows.start({goal:`Read all four supplied sources and write a concise sourced decision note comparing Orion and Vega in ${target}. Cite every source using a Markdown link to its exact filename. Include one exact quoted sentence from each source. Distinguish the two conflicting Orion prices, explain the budget/offline-editing tradeoff, and state that migration duration is unknown. Do not resolve the price conflict or invent a migration duration. Read the saved note back before finishing. Do not ask me to resolve the conflict; the deliverable should explicitly retain it.`,scope:`Read only ${sources.map(s=>join(project,s.name)).join(', ')} and ${target}. Write only ${target}. No commands, browser, cloud or other actions.`,requirements:{files:[{path:target,finalNewline:'required',lineEndings:'lf',...(sourceReview?{sourceReview:true,...(draftCritique?{draftCritique:true}:{})}:{}),...(contentRequirements?{requiredText:sources.flatMap(s=>[s.quote,']('+s.name+')'])}:{})}],commands:[]}});id=w.id;
+  let previous='';
+  while(Date.now()-started<600000){
+   record=await app.store.get('workflows',id);const progress=JSON.stringify([record.status,record.current,record.calls,record.operations.at(-1)?.name]);if(progress!==previous){console.log(`Research ${round}: ${progress}`);previous=progress;}
+   if(['completed','paused','needs_verification','failed','cancelled','needs_help','waiting_input'].includes(record.status)&&!app.workflows.running.has(id))break;
+   if(record.status==='plan_review'&&!app.workflows.running.has(id)){assert.equal(planReviews,0);assert.equal(record.operations.length,0);await app.workflows.control(id,'approve_plan','',record.revision);planReviews++;}
+   for(const op of record.operations.filter(o=>o.action&&o.status==='waiting_approval')){const a=await app.store.get('actions',op.action);if(a.status!=='pending')continue;assert.equal(a.kind,'write');assert.equal(a.payload.path,target);assert(a.payload.content.length<16000);await app.actions.decide(a.id,'approve',a.digest);approvals++;}
+   await new Promise(r=>setTimeout(r,400));
+  }
+  const calculations=record.operations.flatMap(o=>[...(o.name==='compare_source_values'&&o.status==='completed'?[o.result]:[]),...(o.sourceCalculations||[])]),expectedComparisons=[['orion-quote.md','140','>'],['orion-catalog.md','110','<'],['vega-catalog.md','90','<']];
+  const output=await readFile(target,'utf8').catch(()=>''),links=[...output.matchAll(/\[([^\]\n]+)\]\(([^)\n]+)\)/g)].map(m=>m[2]),checks={...(sourceReview?{claimReviews:record.operations.filter(o=>o.action&&o.name==='propose_file_edit').length>0&&record.operations.filter(o=>o.action&&o.name==='propose_file_edit').every(o=>o.sourceReview?.claims.length&&o.sourceReview.sources.length===4)}:{}),sourceCalculations:expectedComparisons.every(([file,value,relation])=>calculations.some(c=>c.left.source===join(project,file)&&c.left.value===value&&c.right.source===join(project,'requirements.md')&&c.right.value==='120'&&c.relation===relation||c.right.source===join(project,file)&&c.right.value===value&&c.left.source===join(project,'requirements.md')&&c.left.value==='120'&&c.relation===(relation==='<'?'>':'<'))),completed:record.status==='completed',allSourcesObserved:sources.every(s=>record.operations.some(o=>o.name==='read_system_file'&&o.status==='completed'&&o.result?.path===join(project,s.name))),exactQuotes:sources.every(s=>[s.quote,...(s.text.match(/[^.!?]+[.!?]/g)||[]).map(x=>x.trim())].some(quote=>output.includes(quote))),sourceLinks:sources.every(s=>links.includes(s.name)||links.includes(join(project,s.name))),retainsConflict:/conflict|contradict|discrepan|unresolved/i.test(output)&&output.includes('140')&&output.includes('110'),unknownDuration:statesUnknownMigration(output),readback:app.workflows.unverifiedWrites(record).length===0&&record.operations.some(o=>o.name==='read_system_file'&&o.result?.path===target&&o.result?.content===output),sourcesUnchanged:(await Promise.all(sources.map(s=>readFile(join(project,s.name),'utf8')))).every((text,i)=>text==='# '+sources[i].name+'\n\n'+sources[i].text+'\n')};
+  const result={round,contentRequirements,sourceReview,draftCritique,claimReviews:record.operations.filter(o=>o.sourceReview).map(o=>o.sourceReview),manualReviewRequired:true,symbolicRelations:expectedComparisons.every(([,value,relation])=>new RegExp('\\b'+value+'\\s*'+relation+'\\s*120\\b|\\b120\\s*'+(relation==='<'?'>':'<')+'\\s*'+value+'\\b').test(output)),checksScope:'Source-backed decimal comparisons, literal content, links and observed file state. Symbolic relation spelling is informational; factual prose and recommendations still require manual review.',ok:Object.values(checks).every(Boolean),seconds:Math.round((Date.now()-started)/1000),approvals,planReviews,model:'qwen3.5:9b',checks,calculations,combinedRepairs:record.operations.filter(o=>o.requestedTool==='propose_draft_repair').length,falseCompletion:record.status==='completed'&&!Object.values(checks).every(Boolean),output,record};reports.push(result);console.log(JSON.stringify({...result,record:undefined,output:undefined,calculations:calculations.map(c=>c.expression)}));
+ }catch(e){reports.push({round,ok:false,seconds:Math.round((Date.now()-started)/1000),approvals,error:e.message,record});}
+ finally{await app.workflows.close();app.actions.stopAll();while(app.actions.running.size)await new Promise(r=>setTimeout(r,30));await rm(dir,{recursive:true,force:true});await writeFile(new URL('../artifacts/research-workflow-live-results.json',import.meta.url),JSON.stringify(reports,null,2));await writeFile(new URL('../artifacts/research-workflow-live-'+runId+'.json',import.meta.url),JSON.stringify(reports,null,2));}
+}
+if(reports.some(r=>!r.ok))process.exitCode=1;

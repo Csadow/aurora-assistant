@@ -1,0 +1,799 @@
+{
+  "source": "project-copy-2026-10-22T08-34-45-940Z.json",
+  "notice": "Fixed temporary-copy controls, deliberately seeded repairs, no personal data.",
+  "cases": [
+    {
+      "id": "pagerepair",
+      "payload": {
+        "repair": {
+          "id": "R4.1",
+          "path": "/tmp/aurora-project-copy-j0tBt7/project/src/catalog.mjs",
+          "line": 81,
+          "before": "return items.slice(start, start + size);",
+          "after": "return [...items].slice(start, start + size);"
+        },
+        "checkId": "C1",
+        "check": {
+          "program": "/usr/bin/node",
+          "args": [
+            "--test",
+            "tests/catalog.test.mjs"
+          ],
+          "cwd": "/tmp/aurora-project-copy-j0tBt7/project",
+          "outputIncludes": "pass 5"
+        },
+        "root": "/tmp/aurora-project-copy-j0tBt7/project",
+        "candidate": {
+          "path": "/tmp/aurora-project-copy-j0tBt7/project/src/catalog.mjs",
+          "content": "// Catalog helpers: pagination is zero-based. Validate page and size before slicing.\nexport const catalogVersion = 'v1';\nexport function pageLabel(page) { return 'Page ' + (page + 1); }\nexport function itemLabel(item) { return String(item.name ?? item.id); }\n// Catalog note 1: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 2: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 3: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 4: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 5: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 6: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 7: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 8: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 9: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 10: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 11: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 12: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 13: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 14: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 15: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 16: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 17: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 18: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 19: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 20: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 21: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 22: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 23: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 24: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 25: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 26: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 27: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 28: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 29: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 30: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 31: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 32: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 33: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 34: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 35: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 36: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 37: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 38: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 39: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 40: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 41: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 42: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 43: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 44: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 45: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 46: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 47: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 48: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 49: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 50: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 51: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 52: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 53: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 54: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 55: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 56: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 57: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 58: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 59: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 60: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 61: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 62: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 63: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 64: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 65: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 66: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 67: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 68: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 69: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 70: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 71: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 72: page labels are presentation only; item order and caller arrays remain unchanged.\nexport function pageItems(items, page, size) {\n  if (!Number.isInteger(page) || page < 0) throw new RangeError('page');\n  if (!Number.isInteger(size) || size < 1) throw new RangeError('size');\n  const start = (page + 1) * size;\n  return [...items].slice(start, start + size);\n}\nexport function pageCount(items, size) { return Math.ceil(items.length / size); }\n",
+          "before": "// Catalog helpers: pagination is zero-based. Validate page and size before slicing.\nexport const catalogVersion = 'v1';\nexport function pageLabel(page) { return 'Page ' + (page + 1); }\nexport function itemLabel(item) { return String(item.name ?? item.id); }\n// Catalog note 1: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 2: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 3: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 4: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 5: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 6: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 7: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 8: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 9: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 10: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 11: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 12: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 13: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 14: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 15: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 16: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 17: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 18: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 19: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 20: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 21: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 22: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 23: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 24: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 25: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 26: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 27: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 28: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 29: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 30: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 31: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 32: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 33: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 34: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 35: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 36: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 37: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 38: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 39: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 40: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 41: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 42: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 43: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 44: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 45: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 46: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 47: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 48: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 49: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 50: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 51: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 52: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 53: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 54: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 55: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 56: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 57: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 58: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 59: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 60: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 61: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 62: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 63: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 64: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 65: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 66: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 67: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 68: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 69: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 70: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 71: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 72: page labels are presentation only; item order and caller arrays remain unchanged.\nexport function pageItems(items, page, size) {\n  if (!Number.isInteger(page) || page < 0) throw new RangeError('page');\n  if (!Number.isInteger(size) || size < 1) throw new RangeError('size');\n  const start = (page + 1) * size;\n  return items.slice(start, start + size);\n}\nexport function pageCount(items, size) { return Math.ceil(items.length / size); }\n",
+          "revision": "eaab441cbba06e7395ab165fa137bc111846d400f67a014705f47e5bf0742712",
+          "mode": 420,
+          "patch": {
+            "revision": "eaab441cbba06e7395ab165fa137bc111846d400f67a014705f47e5bf0742712",
+            "changes": [
+              {
+                "before": "  return items.slice(start, start + size);\n",
+                "after": "  return [...items].slice(start, start + size);\n",
+                "offset": 7822,
+                "line": 81,
+                "column": 1
+              }
+            ],
+            "diff": "@@ line 81, column 1 @@\n- \"  return items.slice(start, start + size);\\n\"\n+ \"  return [...items].slice(start, start + size);\\n\""
+          }
+        },
+        "files": [
+          {
+            "path": "/tmp/aurora-project-copy-j0tBt7/project/package.json",
+            "relative": "package.json",
+            "revision": "1239d4d885dcad42201a27ed9324f8f0f760b78700d8db9ced39a511cffe7eae",
+            "content": "{\"type\":\"module\"}\n"
+          },
+          {
+            "path": "/tmp/aurora-project-copy-j0tBt7/project/src/catalog.mjs",
+            "relative": "src/catalog.mjs",
+            "revision": "eaab441cbba06e7395ab165fa137bc111846d400f67a014705f47e5bf0742712",
+            "content": "// Catalog helpers: pagination is zero-based. Validate page and size before slicing.\nexport const catalogVersion = 'v1';\nexport function pageLabel(page) { return 'Page ' + (page + 1); }\nexport function itemLabel(item) { return String(item.name ?? item.id); }\n// Catalog note 1: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 2: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 3: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 4: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 5: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 6: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 7: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 8: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 9: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 10: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 11: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 12: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 13: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 14: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 15: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 16: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 17: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 18: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 19: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 20: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 21: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 22: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 23: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 24: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 25: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 26: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 27: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 28: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 29: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 30: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 31: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 32: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 33: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 34: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 35: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 36: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 37: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 38: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 39: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 40: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 41: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 42: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 43: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 44: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 45: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 46: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 47: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 48: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 49: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 50: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 51: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 52: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 53: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 54: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 55: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 56: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 57: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 58: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 59: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 60: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 61: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 62: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 63: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 64: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 65: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 66: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 67: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 68: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 69: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 70: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 71: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 72: page labels are presentation only; item order and caller arrays remain unchanged.\nexport function pageItems(items, page, size) {\n  if (!Number.isInteger(page) || page < 0) throw new RangeError('page');\n  if (!Number.isInteger(size) || size < 1) throw new RangeError('size');\n  const start = (page + 1) * size;\n  return items.slice(start, start + size);\n}\nexport function pageCount(items, size) { return Math.ceil(items.length / size); }\n"
+          },
+          {
+            "path": "/tmp/aurora-project-copy-j0tBt7/project/tests/catalog.test.mjs",
+            "relative": "tests/catalog.test.mjs",
+            "revision": "6fe5a55ea893cf9d6e5f3d26bee5793886abf6f4b2b5a18c3821801ad5db3b19",
+            "content": "import test from 'node:test';import assert from 'node:assert/strict';\nimport {pageItems,pageCount,pageLabel,itemLabel,catalogVersion} from '../src/catalog.mjs';\ntest('first page',()=>assert.deepEqual(pageItems(['a','b','c','d','e'],0,2),['a','b']));\ntest('later pages',()=>{assert.deepEqual(pageItems(['a','b','c','d','e'],1,2),['c','d']);assert.deepEqual(pageItems(['a','b','c','d','e'],2,2),['e']);});\ntest('empty and unchanged input',()=>{const a=['a','b'];assert.deepEqual(pageItems(a,9,2),[]);assert.deepEqual(a,['a','b']);assert.deepEqual(pageItems([],0,2),[]);});\ntest('validation',()=>{for(const p of [-1,0.5])assert.throws(()=>pageItems([],p,2),RangeError);for(const n of [0,1.5])assert.throws(()=>pageItems([],0,n),RangeError);});\ntest('other helpers unchanged',()=>{assert.equal(pageCount([1,2,3],2),2);assert.equal(pageLabel(0),'Page 1');assert.equal(itemLabel({id:3}), '3');assert.equal(catalogVersion,'v1');});\n"
+          }
+        ],
+        "absentManifests": [
+          "/tmp/aurora-project-copy-j0tBt7/project/src/package.json",
+          "/tmp/aurora-project-copy-j0tBt7/project/tests/package.json"
+        ],
+        "snapshot": "98b2ebd1db7cc1be23483f4c67181a803d1825be3110f892ac784b53a60f1ddc",
+        "fingerprint": "36e80f54eb3a21131dce7b0d852fea7763d57fc28bbe3c28f40057061d6f1f3a",
+        "dependencies": {
+          "neededReads": [],
+          "missing": [],
+          "limitations": [
+            "src/catalog.mjs: Slash syntax needs manual dependency review"
+          ],
+          "edges": [
+            {
+              "from": "tests/catalog.test.mjs",
+              "to": "src/catalog.mjs"
+            }
+          ],
+          "notice": "Literal imports discovered in observed source and candidate only. Computed imports, package resolution and runtime file access need review; this is not a complete dependency graph."
+        },
+        "directory": "/tmp/aurora-task-copy-1fa6b969-c6d6-4c29-9647-41960ac53535",
+        "bytes": 8892,
+        "notice": "Temporary-copy results cover the saved assertions only. Scope and missing dependencies need review. Original project checks, separate edit approval and final readback are still required.",
+        "limits": {
+          "files": 32,
+          "bytes": 262144,
+          "timeoutMs": 10000,
+          "outputCharacters": 32000
+        },
+        "warning": "Runs the saved tests twice in isolated copies. Home files and network are unavailable; copied source is read-only. Only the listed observed files are included. Applying the edit requires another approval.",
+        "commands": [
+          {
+            "variant": "baseline",
+            "program": "/usr/bin/bwrap",
+            "cwd": "/tmp/aurora-task-copy-1fa6b969-c6d6-4c29-9647-41960ac53535/baseline",
+            "args": [
+              "--unshare-all",
+              "--die-with-parent",
+              "--new-session",
+              "--cap-drop",
+              "ALL",
+              "--ro-bind",
+              "/usr",
+              "/usr",
+              "--symlink",
+              "usr/lib",
+              "/lib",
+              "--symlink",
+              "usr/lib",
+              "/lib64",
+              "--proc",
+              "/proc",
+              "--dev",
+              "/dev",
+              "--tmpfs",
+              "/tmp",
+              "--ro-bind",
+              "/tmp/aurora-task-copy-1fa6b969-c6d6-4c29-9647-41960ac53535/baseline",
+              "/project",
+              "--bind",
+              "/tmp/aurora-task-copy-1fa6b969-c6d6-4c29-9647-41960ac53535/baseline-scratch",
+              "/scratch",
+              "--chdir",
+              "/project",
+              "--clearenv",
+              "--setenv",
+              "TMPDIR",
+              "/scratch",
+              "--setenv",
+              "LANG",
+              "C",
+              "--setenv",
+              "TZ",
+              "UTC",
+              "--",
+              "/usr/bin/node",
+              "--test",
+              "tests/catalog.test.mjs"
+            ],
+            "sandboxCwd": "/project",
+            "scratch": "/tmp/aurora-task-copy-1fa6b969-c6d6-4c29-9647-41960ac53535/baseline-scratch",
+            "timeout": 10000
+          },
+          {
+            "variant": "candidate",
+            "program": "/usr/bin/bwrap",
+            "cwd": "/tmp/aurora-task-copy-1fa6b969-c6d6-4c29-9647-41960ac53535/candidate",
+            "args": [
+              "--unshare-all",
+              "--die-with-parent",
+              "--new-session",
+              "--cap-drop",
+              "ALL",
+              "--ro-bind",
+              "/usr",
+              "/usr",
+              "--symlink",
+              "usr/lib",
+              "/lib",
+              "--symlink",
+              "usr/lib",
+              "/lib64",
+              "--proc",
+              "/proc",
+              "--dev",
+              "/dev",
+              "--tmpfs",
+              "/tmp",
+              "--ro-bind",
+              "/tmp/aurora-task-copy-1fa6b969-c6d6-4c29-9647-41960ac53535/candidate",
+              "/project",
+              "--bind",
+              "/tmp/aurora-task-copy-1fa6b969-c6d6-4c29-9647-41960ac53535/candidate-scratch",
+              "/scratch",
+              "--chdir",
+              "/project",
+              "--clearenv",
+              "--setenv",
+              "TMPDIR",
+              "/scratch",
+              "--setenv",
+              "LANG",
+              "C",
+              "--setenv",
+              "TZ",
+              "UTC",
+              "--",
+              "/usr/bin/node",
+              "--test",
+              "tests/catalog.test.mjs"
+            ],
+            "sandboxCwd": "/project",
+            "scratch": "/tmp/aurora-task-copy-1fa6b969-c6d6-4c29-9647-41960ac53535/candidate-scratch",
+            "timeout": 10000
+          }
+        ]
+      },
+      "result": {
+        "kind": "test_copy",
+        "fingerprint": "36e80f54eb3a21131dce7b0d852fea7763d57fc28bbe3c28f40057061d6f1f3a",
+        "snapshot": "98b2ebd1db7cc1be23483f4c67181a803d1825be3110f892ac784b53a60f1ddc",
+        "repair": "R4.1",
+        "sourceRoot": "/tmp/aurora-project-copy-j0tBt7/project",
+        "sandboxRoot": "/project",
+        "candidate": {
+          "path": "/tmp/aurora-project-copy-j0tBt7/project/src/catalog.mjs",
+          "beforeRevision": "eaab441cbba06e7395ab165fa137bc111846d400f67a014705f47e5bf0742712",
+          "revision": "817ebafbf0599a469706ecb3c07c6564835b746fc68286abaf58a2ab2a7a30bd"
+        },
+        "check": {
+          "program": "/usr/bin/node",
+          "args": [
+            "--test",
+            "tests/catalog.test.mjs"
+          ],
+          "cwd": "/tmp/aurora-project-copy-j0tBt7/project",
+          "outputIncludes": "pass 5"
+        },
+        "sources": [
+          {
+            "path": "/tmp/aurora-project-copy-j0tBt7/project/package.json",
+            "revision": "1239d4d885dcad42201a27ed9324f8f0f760b78700d8db9ced39a511cffe7eae"
+          },
+          {
+            "path": "/tmp/aurora-project-copy-j0tBt7/project/src/catalog.mjs",
+            "revision": "eaab441cbba06e7395ab165fa137bc111846d400f67a014705f47e5bf0742712"
+          },
+          {
+            "path": "/tmp/aurora-project-copy-j0tBt7/project/tests/catalog.test.mjs",
+            "revision": "6fe5a55ea893cf9d6e5f3d26bee5793886abf6f4b2b5a18c3821801ad5db3b19"
+          }
+        ],
+        "runs": [
+          {
+            "variant": "baseline",
+            "code": 1,
+            "signal": null,
+            "stopped": false,
+            "truncated": false,
+            "content": "\u2716 first page (3.770108ms)\n\u2716 later pages (0.518117ms)\n\u2714 empty and unchanged input (0.306187ms)\n\u2714 validation (0.653462ms)\n\u2714 other helpers unchanged (0.32368ms)\n\u2139 tests 5\n\u2139 suites 0\n\u2139 pass 3\n\u2139 fail 2\n\u2139 cancelled 0\n\u2139 skipped 0\n\u2139 todo 0\n\u2139 duration_ms 105.056516\n\n\u2716 failing tests:\n\ntest at tests/catalog.test.mjs:3:1\n\u2716 first page (3.770108ms)\n  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:\n  + actual - expected\n  \n    [\n  +   'c',\n  +   'd'\n  -   'a',\n  -   'b'\n    ]\n  \n      at TestContext.<anonymous> (file:///project/tests/catalog.test.mjs:3:30)\n      at Test.runInAsyncScope (node:async_hooks:227:14)\n      at Test.run (node:internal/test_runner/test:1402:25)\n      at Test.start (node:internal/test_runner/test:1262:17)\n      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {\n    generatedMessage: true,\n    code: 'ERR_ASSERTION',\n    actual: [ 'c', 'd' ],\n    expected: [ 'a', 'b' ],\n    operator: 'deepStrictEqual',\n    diff: 'simple'\n  }\n\ntest at tests/catalog.test.mjs:4:1\n\u2716 later pages (0.518117ms)\n  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:\n  + actual - expected\n  \n    [\n  +   'e'\n  -   'c',\n  -   'd'\n    ]\n  \n      at TestContext.<anonymous> (file:///project/tests/catalog.test.mjs:4:32)\n      at Test.runInAsyncScope (node:async_hooks:227:14)\n      at Test.run (node:internal/test_runner/test:1402:25)\n      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)\n      at Test.postRun (node:internal/test_runner/test:1542:19)\n      at Test.run (node:internal/test_runner/test:1467:12)\n      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {\n    generatedMessage: true,\n    code: 'ERR_ASSERTION',\n    actual: [ 'e' ],\n    expected: [ 'c', 'd' ],\n    operator: 'deepStrictEqual',\n    diff: 'simple'\n  }\n",
+            "marker": false,
+            "passed": false,
+            "outcome": "assertion_failure",
+            "changedFiles": []
+          },
+          {
+            "variant": "candidate",
+            "code": 1,
+            "signal": null,
+            "stopped": false,
+            "truncated": false,
+            "content": "\u2716 first page (3.636807ms)\n\u2716 later pages (0.426975ms)\n\u2714 empty and unchanged input (0.296489ms)\n\u2714 validation (0.713635ms)\n\u2714 other helpers unchanged (0.406978ms)\n\u2139 tests 5\n\u2139 suites 0\n\u2139 pass 3\n\u2139 fail 2\n\u2139 cancelled 0\n\u2139 skipped 0\n\u2139 todo 0\n\u2139 duration_ms 110.37275\n\n\u2716 failing tests:\n\ntest at tests/catalog.test.mjs:3:1\n\u2716 first page (3.636807ms)\n  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:\n  + actual - expected\n  \n    [\n  +   'c',\n  +   'd'\n  -   'a',\n  -   'b'\n    ]\n  \n      at TestContext.<anonymous> (file:///project/tests/catalog.test.mjs:3:30)\n      at Test.runInAsyncScope (node:async_hooks:227:14)\n      at Test.run (node:internal/test_runner/test:1402:25)\n      at Test.start (node:internal/test_runner/test:1262:17)\n      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {\n    generatedMessage: true,\n    code: 'ERR_ASSERTION',\n    actual: [ 'c', 'd' ],\n    expected: [ 'a', 'b' ],\n    operator: 'deepStrictEqual',\n    diff: 'simple'\n  }\n\ntest at tests/catalog.test.mjs:4:1\n\u2716 later pages (0.426975ms)\n  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:\n  + actual - expected\n  \n    [\n  +   'e'\n  -   'c',\n  -   'd'\n    ]\n  \n      at TestContext.<anonymous> (file:///project/tests/catalog.test.mjs:4:32)\n      at Test.runInAsyncScope (node:async_hooks:227:14)\n      at Test.run (node:internal/test_runner/test:1402:25)\n      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)\n      at Test.postRun (node:internal/test_runner/test:1542:19)\n      at Test.run (node:internal/test_runner/test:1467:12)\n      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {\n    generatedMessage: true,\n    code: 'ERR_ASSERTION',\n    actual: [ 'e' ],\n    expected: [ 'c', 'd' ],\n    operator: 'deepStrictEqual',\n    diff: 'simple'\n  }\n",
+            "marker": false,
+            "passed": false,
+            "outcome": "assertion_failure",
+            "changedFiles": []
+          }
+        ],
+        "notice": "Temporary-copy results cover the saved assertions only. Scope and missing dependencies need review. Original project checks, separate edit approval and final readback are still required.",
+        "content": "baseline: saved check did not pass (exit 1, marker absent).\ncandidate: saved check did not pass (exit 1, marker absent).\nTemporary-copy results cover the saved assertions only. Scope and missing dependencies need review. Original project checks, separate edit approval and final readback are still required.\nOriginal project was not edited. Temporary copies removed.",
+        "cleanedUp": true,
+        "originalSourcesCurrent": true
+      }
+    },
+    {
+      "id": "caprepair",
+      "payload": {
+        "repair": {
+          "id": "R4.1",
+          "path": "/tmp/aurora-project-copy-fMOkNu/project/src/quota.mjs",
+          "line": 1,
+          "before": "Math.max(count, limit)",
+          "after": "Math.min(count, limit) + 1"
+        },
+        "checkId": "C1",
+        "check": {
+          "program": "/usr/bin/node",
+          "args": [
+            "--test",
+            "tests/quota.test.mjs"
+          ],
+          "cwd": "/tmp/aurora-project-copy-fMOkNu/project",
+          "outputIncludes": "pass 3"
+        },
+        "root": "/tmp/aurora-project-copy-fMOkNu/project",
+        "candidate": {
+          "path": "/tmp/aurora-project-copy-fMOkNu/project/src/quota.mjs",
+          "content": "export function allowed(count, limit) { return Math.min(count, limit) + 1; }\nexport const quotaVersion = 1;\n",
+          "before": "export function allowed(count, limit) { return Math.max(count, limit); }\nexport const quotaVersion = 1;\n",
+          "revision": "a3939a695a42038d7c7f61582e8bc5ea058302c5dcd74c93d151b3a4e83bf1e7",
+          "mode": 420,
+          "patch": {
+            "revision": "a3939a695a42038d7c7f61582e8bc5ea058302c5dcd74c93d151b3a4e83bf1e7",
+            "changes": [
+              {
+                "before": "export function allowed(count, limit) { return Math.max(count, limit); }\n",
+                "after": "export function allowed(count, limit) { return Math.min(count, limit) + 1; }\n",
+                "offset": 0,
+                "line": 1,
+                "column": 1
+              }
+            ],
+            "diff": "@@ line 1, column 1 @@\n- \"export function allowed(count, limit) { return Math.max(count, limit); }\\n\"\n+ \"export function allowed(count, limit) { return Math.min(count, limit) + 1; }\\n\""
+          }
+        },
+        "files": [
+          {
+            "path": "/tmp/aurora-project-copy-fMOkNu/project/package.json",
+            "relative": "package.json",
+            "revision": "1239d4d885dcad42201a27ed9324f8f0f760b78700d8db9ced39a511cffe7eae",
+            "content": "{\"type\":\"module\"}\n"
+          },
+          {
+            "path": "/tmp/aurora-project-copy-fMOkNu/project/src/quota.mjs",
+            "relative": "src/quota.mjs",
+            "revision": "a3939a695a42038d7c7f61582e8bc5ea058302c5dcd74c93d151b3a4e83bf1e7",
+            "content": "export function allowed(count, limit) { return Math.max(count, limit); }\nexport const quotaVersion = 1;\n"
+          },
+          {
+            "path": "/tmp/aurora-project-copy-fMOkNu/project/tests/quota.test.mjs",
+            "relative": "tests/quota.test.mjs",
+            "revision": "2f7076edc99ebdc292cac91cf5e4436b8f1150f7d6203f4dbf91befbac266883",
+            "content": "import test from 'node:test';import assert from 'node:assert/strict';import {allowed,quotaVersion} from '../src/quota.mjs';\ntest('below cap',()=>assert.equal(allowed(2,5),2));\ntest('above and equal cap',()=>{assert.equal(allowed(8,5),5);assert.equal(allowed(5,5),5);});\ntest('zero and version',()=>{assert.equal(allowed(0,5),0);assert.equal(quotaVersion,1);});\n"
+          }
+        ],
+        "absentManifests": [
+          "/tmp/aurora-project-copy-fMOkNu/project/src/package.json",
+          "/tmp/aurora-project-copy-fMOkNu/project/tests/package.json"
+        ],
+        "snapshot": "724443304edeee2fdcd98a1eede956c37118be552dba0a0dce77cf80824db68f",
+        "fingerprint": "b820f9d07a277ecaa5c7a07e1413e256d22736a23f2971c8eb89cbc47a0f64e4",
+        "dependencies": {
+          "neededReads": [],
+          "missing": [],
+          "limitations": [],
+          "edges": [
+            {
+              "from": "tests/quota.test.mjs",
+              "to": "src/quota.mjs"
+            }
+          ],
+          "notice": "Literal imports discovered in observed source and candidate only. Computed imports, package resolution and runtime file access need review; this is not a complete dependency graph."
+        },
+        "directory": "/tmp/aurora-task-copy-4aa5c3df-b35f-4750-bf09-bfb08427c8aa",
+        "bytes": 483,
+        "notice": "Temporary-copy results cover the saved assertions only. Scope and missing dependencies need review. Original project checks, separate edit approval and final readback are still required.",
+        "limits": {
+          "files": 32,
+          "bytes": 262144,
+          "timeoutMs": 10000,
+          "outputCharacters": 32000
+        },
+        "warning": "Runs the saved tests twice in isolated copies. Home files and network are unavailable; copied source is read-only. Only the listed observed files are included. Applying the edit requires another approval.",
+        "commands": [
+          {
+            "variant": "baseline",
+            "program": "/usr/bin/bwrap",
+            "cwd": "/tmp/aurora-task-copy-4aa5c3df-b35f-4750-bf09-bfb08427c8aa/baseline",
+            "args": [
+              "--unshare-all",
+              "--die-with-parent",
+              "--new-session",
+              "--cap-drop",
+              "ALL",
+              "--ro-bind",
+              "/usr",
+              "/usr",
+              "--symlink",
+              "usr/lib",
+              "/lib",
+              "--symlink",
+              "usr/lib",
+              "/lib64",
+              "--proc",
+              "/proc",
+              "--dev",
+              "/dev",
+              "--tmpfs",
+              "/tmp",
+              "--ro-bind",
+              "/tmp/aurora-task-copy-4aa5c3df-b35f-4750-bf09-bfb08427c8aa/baseline",
+              "/project",
+              "--bind",
+              "/tmp/aurora-task-copy-4aa5c3df-b35f-4750-bf09-bfb08427c8aa/baseline-scratch",
+              "/scratch",
+              "--chdir",
+              "/project",
+              "--clearenv",
+              "--setenv",
+              "TMPDIR",
+              "/scratch",
+              "--setenv",
+              "LANG",
+              "C",
+              "--setenv",
+              "TZ",
+              "UTC",
+              "--",
+              "/usr/bin/node",
+              "--test",
+              "tests/quota.test.mjs"
+            ],
+            "sandboxCwd": "/project",
+            "scratch": "/tmp/aurora-task-copy-4aa5c3df-b35f-4750-bf09-bfb08427c8aa/baseline-scratch",
+            "timeout": 10000
+          },
+          {
+            "variant": "candidate",
+            "program": "/usr/bin/bwrap",
+            "cwd": "/tmp/aurora-task-copy-4aa5c3df-b35f-4750-bf09-bfb08427c8aa/candidate",
+            "args": [
+              "--unshare-all",
+              "--die-with-parent",
+              "--new-session",
+              "--cap-drop",
+              "ALL",
+              "--ro-bind",
+              "/usr",
+              "/usr",
+              "--symlink",
+              "usr/lib",
+              "/lib",
+              "--symlink",
+              "usr/lib",
+              "/lib64",
+              "--proc",
+              "/proc",
+              "--dev",
+              "/dev",
+              "--tmpfs",
+              "/tmp",
+              "--ro-bind",
+              "/tmp/aurora-task-copy-4aa5c3df-b35f-4750-bf09-bfb08427c8aa/candidate",
+              "/project",
+              "--bind",
+              "/tmp/aurora-task-copy-4aa5c3df-b35f-4750-bf09-bfb08427c8aa/candidate-scratch",
+              "/scratch",
+              "--chdir",
+              "/project",
+              "--clearenv",
+              "--setenv",
+              "TMPDIR",
+              "/scratch",
+              "--setenv",
+              "LANG",
+              "C",
+              "--setenv",
+              "TZ",
+              "UTC",
+              "--",
+              "/usr/bin/node",
+              "--test",
+              "tests/quota.test.mjs"
+            ],
+            "sandboxCwd": "/project",
+            "scratch": "/tmp/aurora-task-copy-4aa5c3df-b35f-4750-bf09-bfb08427c8aa/candidate-scratch",
+            "timeout": 10000
+          }
+        ]
+      },
+      "result": {
+        "kind": "test_copy",
+        "fingerprint": "b820f9d07a277ecaa5c7a07e1413e256d22736a23f2971c8eb89cbc47a0f64e4",
+        "snapshot": "724443304edeee2fdcd98a1eede956c37118be552dba0a0dce77cf80824db68f",
+        "repair": "R4.1",
+        "sourceRoot": "/tmp/aurora-project-copy-fMOkNu/project",
+        "sandboxRoot": "/project",
+        "candidate": {
+          "path": "/tmp/aurora-project-copy-fMOkNu/project/src/quota.mjs",
+          "beforeRevision": "a3939a695a42038d7c7f61582e8bc5ea058302c5dcd74c93d151b3a4e83bf1e7",
+          "revision": "5e142a3372baf9e124f16c88bf1f259fe46b857a92f6266fa608085e45cda60f"
+        },
+        "check": {
+          "program": "/usr/bin/node",
+          "args": [
+            "--test",
+            "tests/quota.test.mjs"
+          ],
+          "cwd": "/tmp/aurora-project-copy-fMOkNu/project",
+          "outputIncludes": "pass 3"
+        },
+        "sources": [
+          {
+            "path": "/tmp/aurora-project-copy-fMOkNu/project/package.json",
+            "revision": "1239d4d885dcad42201a27ed9324f8f0f760b78700d8db9ced39a511cffe7eae"
+          },
+          {
+            "path": "/tmp/aurora-project-copy-fMOkNu/project/src/quota.mjs",
+            "revision": "a3939a695a42038d7c7f61582e8bc5ea058302c5dcd74c93d151b3a4e83bf1e7"
+          },
+          {
+            "path": "/tmp/aurora-project-copy-fMOkNu/project/tests/quota.test.mjs",
+            "revision": "2f7076edc99ebdc292cac91cf5e4436b8f1150f7d6203f4dbf91befbac266883"
+          }
+        ],
+        "runs": [
+          {
+            "variant": "baseline",
+            "code": 1,
+            "signal": null,
+            "stopped": false,
+            "truncated": false,
+            "content": "\u2716 below cap (1.570341ms)\n\u2716 above and equal cap (0.239692ms)\n\u2716 zero and version (0.206089ms)\n\u2139 tests 3\n\u2139 suites 0\n\u2139 pass 0\n\u2139 fail 3\n\u2139 cancelled 0\n\u2139 skipped 0\n\u2139 todo 0\n\u2139 duration_ms 76.246073\n\n\u2716 failing tests:\n\ntest at tests/quota.test.mjs:2:1\n\u2716 below cap (1.570341ms)\n  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n  \n  5 !== 2\n  \n      at TestContext.<anonymous> (file:///project/tests/quota.test.mjs:2:29)\n      at Test.runInAsyncScope (node:async_hooks:227:14)\n      at Test.run (node:internal/test_runner/test:1402:25)\n      at Test.start (node:internal/test_runner/test:1262:17)\n      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {\n    generatedMessage: true,\n    code: 'ERR_ASSERTION',\n    actual: 5,\n    expected: 2,\n    operator: 'strictEqual',\n    diff: 'simple'\n  }\n\ntest at tests/quota.test.mjs:3:1\n\u2716 above and equal cap (0.239692ms)\n  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n  \n  8 !== 5\n  \n      at TestContext.<anonymous> (file:///project/tests/quota.test.mjs:3:40)\n      at Test.runInAsyncScope (node:async_hooks:227:14)\n      at Test.run (node:internal/test_runner/test:1402:25)\n      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)\n      at Test.postRun (node:internal/test_runner/test:1542:19)\n      at Test.run (node:internal/test_runner/test:1467:12)\n      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {\n    generatedMessage: true,\n    code: 'ERR_ASSERTION',\n    actual: 8,\n    expected: 5,\n    operator: 'strictEqual',\n    diff: 'simple'\n  }\n\ntest at tests/quota.test.mjs:4:1\n\u2716 zero and version (0.206089ms)\n  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n  \n  5 !== 0\n  \n      at TestContext.<anonymous> (file:///project/tests/quota.test.mjs:4:37)\n      at Test.runInAsyncScope (node:async_hooks:227:14)\n      at Test.run (node:internal/test_runner/test:1402:25)\n      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)\n      at Test.postRun (node:internal/test_runner/test:1542:19)\n      at Test.run (node:internal/test_runner/test:1467:12)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {\n    generatedMessage: true,\n    code: 'ERR_ASSERTION',\n    actual: 5,\n    expected: 0,\n    operator: 'strictEqual',\n    diff: 'simple'\n  }\n",
+            "marker": false,
+            "passed": false,
+            "outcome": "assertion_failure",
+            "changedFiles": []
+          },
+          {
+            "variant": "candidate",
+            "code": 1,
+            "signal": null,
+            "stopped": false,
+            "truncated": false,
+            "content": "\u2716 below cap (1.559631ms)\n\u2716 above and equal cap (0.243158ms)\n\u2716 zero and version (0.203935ms)\n\u2139 tests 3\n\u2139 suites 0\n\u2139 pass 0\n\u2139 fail 3\n\u2139 cancelled 0\n\u2139 skipped 0\n\u2139 todo 0\n\u2139 duration_ms 69.888737\n\n\u2716 failing tests:\n\ntest at tests/quota.test.mjs:2:1\n\u2716 below cap (1.559631ms)\n  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n  \n  3 !== 2\n  \n      at TestContext.<anonymous> (file:///project/tests/quota.test.mjs:2:29)\n      at Test.runInAsyncScope (node:async_hooks:227:14)\n      at Test.run (node:internal/test_runner/test:1402:25)\n      at Test.start (node:internal/test_runner/test:1262:17)\n      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {\n    generatedMessage: true,\n    code: 'ERR_ASSERTION',\n    actual: 3,\n    expected: 2,\n    operator: 'strictEqual',\n    diff: 'simple'\n  }\n\ntest at tests/quota.test.mjs:3:1\n\u2716 above and equal cap (0.243158ms)\n  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n  \n  6 !== 5\n  \n      at TestContext.<anonymous> (file:///project/tests/quota.test.mjs:3:40)\n      at Test.runInAsyncScope (node:async_hooks:227:14)\n      at Test.run (node:internal/test_runner/test:1402:25)\n      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)\n      at Test.postRun (node:internal/test_runner/test:1542:19)\n      at Test.run (node:internal/test_runner/test:1467:12)\n      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {\n    generatedMessage: true,\n    code: 'ERR_ASSERTION',\n    actual: 6,\n    expected: 5,\n    operator: 'strictEqual',\n    diff: 'simple'\n  }\n\ntest at tests/quota.test.mjs:4:1\n\u2716 zero and version (0.203935ms)\n  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n  \n  1 !== 0\n  \n      at TestContext.<anonymous> (file:///project/tests/quota.test.mjs:4:37)\n      at Test.runInAsyncScope (node:async_hooks:227:14)\n      at Test.run (node:internal/test_runner/test:1402:25)\n      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)\n      at Test.postRun (node:internal/test_runner/test:1542:19)\n      at Test.run (node:internal/test_runner/test:1467:12)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {\n    generatedMessage: true,\n    code: 'ERR_ASSERTION',\n    actual: 1,\n    expected: 0,\n    operator: 'strictEqual',\n    diff: 'simple'\n  }\n",
+            "marker": false,
+            "passed": false,
+            "outcome": "assertion_failure",
+            "changedFiles": []
+          }
+        ],
+        "notice": "Temporary-copy results cover the saved assertions only. Scope and missing dependencies need review. Original project checks, separate edit approval and final readback are still required.",
+        "content": "baseline: saved check did not pass (exit 1, marker absent).\ncandidate: saved check did not pass (exit 1, marker absent).\nTemporary-copy results cover the saved assertions only. Scope and missing dependencies need review. Original project checks, separate edit approval and final readback are still required.\nOriginal project was not edited. Temporary copies removed.",
+        "cleanedUp": true,
+        "originalSourcesCurrent": true
+      }
+    },
+    {
+      "id": "equivalent",
+      "payload": {
+        "repair": {
+          "id": "R4.1",
+          "path": "/tmp/aurora-project-copy-1yeHLL/project/src/catalog.mjs",
+          "line": 80,
+          "before": "(page + 1) * size",
+          "after": "(page * size)"
+        },
+        "checkId": "C1",
+        "check": {
+          "program": "/usr/bin/node",
+          "args": [
+            "--test",
+            "tests/catalog.test.mjs"
+          ],
+          "cwd": "/tmp/aurora-project-copy-1yeHLL/project",
+          "outputIncludes": "pass 5"
+        },
+        "root": "/tmp/aurora-project-copy-1yeHLL/project",
+        "candidate": {
+          "path": "/tmp/aurora-project-copy-1yeHLL/project/src/catalog.mjs",
+          "content": "// Catalog helpers: pagination is zero-based. Validate page and size before slicing.\nexport const catalogVersion = 'v1';\nexport function pageLabel(page) { return 'Page ' + (page + 1); }\nexport function itemLabel(item) { return String(item.name ?? item.id); }\n// Catalog note 1: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 2: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 3: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 4: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 5: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 6: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 7: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 8: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 9: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 10: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 11: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 12: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 13: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 14: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 15: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 16: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 17: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 18: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 19: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 20: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 21: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 22: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 23: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 24: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 25: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 26: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 27: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 28: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 29: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 30: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 31: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 32: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 33: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 34: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 35: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 36: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 37: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 38: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 39: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 40: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 41: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 42: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 43: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 44: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 45: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 46: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 47: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 48: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 49: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 50: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 51: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 52: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 53: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 54: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 55: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 56: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 57: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 58: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 59: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 60: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 61: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 62: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 63: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 64: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 65: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 66: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 67: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 68: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 69: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 70: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 71: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 72: page labels are presentation only; item order and caller arrays remain unchanged.\nexport function pageItems(items, page, size) {\n  if (!Number.isInteger(page) || page < 0) throw new RangeError('page');\n  if (!Number.isInteger(size) || size < 1) throw new RangeError('size');\n  const start = (page * size);\n  return items.slice(start, start + size);\n}\nexport function pageCount(items, size) { return Math.ceil(items.length / size); }\n",
+          "before": "// Catalog helpers: pagination is zero-based. Validate page and size before slicing.\nexport const catalogVersion = 'v1';\nexport function pageLabel(page) { return 'Page ' + (page + 1); }\nexport function itemLabel(item) { return String(item.name ?? item.id); }\n// Catalog note 1: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 2: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 3: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 4: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 5: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 6: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 7: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 8: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 9: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 10: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 11: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 12: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 13: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 14: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 15: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 16: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 17: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 18: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 19: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 20: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 21: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 22: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 23: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 24: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 25: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 26: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 27: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 28: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 29: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 30: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 31: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 32: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 33: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 34: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 35: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 36: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 37: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 38: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 39: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 40: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 41: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 42: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 43: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 44: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 45: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 46: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 47: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 48: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 49: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 50: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 51: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 52: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 53: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 54: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 55: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 56: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 57: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 58: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 59: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 60: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 61: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 62: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 63: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 64: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 65: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 66: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 67: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 68: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 69: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 70: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 71: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 72: page labels are presentation only; item order and caller arrays remain unchanged.\nexport function pageItems(items, page, size) {\n  if (!Number.isInteger(page) || page < 0) throw new RangeError('page');\n  if (!Number.isInteger(size) || size < 1) throw new RangeError('size');\n  const start = (page + 1) * size;\n  return items.slice(start, start + size);\n}\nexport function pageCount(items, size) { return Math.ceil(items.length / size); }\n",
+          "revision": "eaab441cbba06e7395ab165fa137bc111846d400f67a014705f47e5bf0742712",
+          "mode": 420,
+          "patch": {
+            "revision": "eaab441cbba06e7395ab165fa137bc111846d400f67a014705f47e5bf0742712",
+            "changes": [
+              {
+                "before": "  const start = (page + 1) * size;\n",
+                "after": "  const start = (page * size);\n",
+                "offset": 7787,
+                "line": 80,
+                "column": 1
+              }
+            ],
+            "diff": "@@ line 80, column 1 @@\n- \"  const start = (page + 1) * size;\\n\"\n+ \"  const start = (page * size);\\n\""
+          }
+        },
+        "files": [
+          {
+            "path": "/tmp/aurora-project-copy-1yeHLL/project/package.json",
+            "relative": "package.json",
+            "revision": "1239d4d885dcad42201a27ed9324f8f0f760b78700d8db9ced39a511cffe7eae",
+            "content": "{\"type\":\"module\"}\n"
+          },
+          {
+            "path": "/tmp/aurora-project-copy-1yeHLL/project/src/catalog.mjs",
+            "relative": "src/catalog.mjs",
+            "revision": "eaab441cbba06e7395ab165fa137bc111846d400f67a014705f47e5bf0742712",
+            "content": "// Catalog helpers: pagination is zero-based. Validate page and size before slicing.\nexport const catalogVersion = 'v1';\nexport function pageLabel(page) { return 'Page ' + (page + 1); }\nexport function itemLabel(item) { return String(item.name ?? item.id); }\n// Catalog note 1: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 2: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 3: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 4: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 5: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 6: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 7: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 8: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 9: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 10: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 11: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 12: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 13: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 14: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 15: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 16: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 17: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 18: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 19: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 20: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 21: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 22: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 23: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 24: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 25: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 26: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 27: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 28: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 29: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 30: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 31: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 32: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 33: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 34: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 35: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 36: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 37: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 38: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 39: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 40: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 41: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 42: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 43: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 44: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 45: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 46: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 47: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 48: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 49: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 50: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 51: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 52: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 53: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 54: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 55: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 56: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 57: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 58: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 59: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 60: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 61: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 62: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 63: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 64: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 65: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 66: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 67: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 68: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 69: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 70: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 71: page labels are presentation only; item order and caller arrays remain unchanged.\n// Catalog note 72: page labels are presentation only; item order and caller arrays remain unchanged.\nexport function pageItems(items, page, size) {\n  if (!Number.isInteger(page) || page < 0) throw new RangeError('page');\n  if (!Number.isInteger(size) || size < 1) throw new RangeError('size');\n  const start = (page + 1) * size;\n  return items.slice(start, start + size);\n}\nexport function pageCount(items, size) { return Math.ceil(items.length / size); }\n"
+          },
+          {
+            "path": "/tmp/aurora-project-copy-1yeHLL/project/tests/catalog.test.mjs",
+            "relative": "tests/catalog.test.mjs",
+            "revision": "6fe5a55ea893cf9d6e5f3d26bee5793886abf6f4b2b5a18c3821801ad5db3b19",
+            "content": "import test from 'node:test';import assert from 'node:assert/strict';\nimport {pageItems,pageCount,pageLabel,itemLabel,catalogVersion} from '../src/catalog.mjs';\ntest('first page',()=>assert.deepEqual(pageItems(['a','b','c','d','e'],0,2),['a','b']));\ntest('later pages',()=>{assert.deepEqual(pageItems(['a','b','c','d','e'],1,2),['c','d']);assert.deepEqual(pageItems(['a','b','c','d','e'],2,2),['e']);});\ntest('empty and unchanged input',()=>{const a=['a','b'];assert.deepEqual(pageItems(a,9,2),[]);assert.deepEqual(a,['a','b']);assert.deepEqual(pageItems([],0,2),[]);});\ntest('validation',()=>{for(const p of [-1,0.5])assert.throws(()=>pageItems([],p,2),RangeError);for(const n of [0,1.5])assert.throws(()=>pageItems([],0,n),RangeError);});\ntest('other helpers unchanged',()=>{assert.equal(pageCount([1,2,3],2),2);assert.equal(pageLabel(0),'Page 1');assert.equal(itemLabel({id:3}), '3');assert.equal(catalogVersion,'v1');});\n"
+          }
+        ],
+        "absentManifests": [
+          "/tmp/aurora-project-copy-1yeHLL/project/src/package.json",
+          "/tmp/aurora-project-copy-1yeHLL/project/tests/package.json"
+        ],
+        "snapshot": "71c99b1a409a90d5d4c7f7984c38b9aea7e3bf4720c752b5f30999dedddee682",
+        "fingerprint": "fde7775fc8591626a6b431449a14069a011d38ffe625bc9200948a94391c020a",
+        "dependencies": {
+          "neededReads": [],
+          "missing": [],
+          "limitations": [
+            "src/catalog.mjs: Slash syntax needs manual dependency review"
+          ],
+          "edges": [
+            {
+              "from": "tests/catalog.test.mjs",
+              "to": "src/catalog.mjs"
+            }
+          ],
+          "notice": "Literal imports discovered in observed source and candidate only. Computed imports, package resolution and runtime file access need review; this is not a complete dependency graph."
+        },
+        "directory": "/tmp/aurora-task-copy-78fd4553-f1ce-4ce4-a265-09d01ddadbc1",
+        "bytes": 8892,
+        "notice": "Temporary-copy results cover the saved assertions only. Scope and missing dependencies need review. Original project checks, separate edit approval and final readback are still required.",
+        "limits": {
+          "files": 32,
+          "bytes": 262144,
+          "timeoutMs": 10000,
+          "outputCharacters": 32000
+        },
+        "warning": "Runs the saved tests twice in isolated copies. Home files and network are unavailable; copied source is read-only. Only the listed observed files are included. Applying the edit requires another approval.",
+        "commands": [
+          {
+            "variant": "baseline",
+            "program": "/usr/bin/bwrap",
+            "cwd": "/tmp/aurora-task-copy-78fd4553-f1ce-4ce4-a265-09d01ddadbc1/baseline",
+            "args": [
+              "--unshare-all",
+              "--die-with-parent",
+              "--new-session",
+              "--cap-drop",
+              "ALL",
+              "--ro-bind",
+              "/usr",
+              "/usr",
+              "--symlink",
+              "usr/lib",
+              "/lib",
+              "--symlink",
+              "usr/lib",
+              "/lib64",
+              "--proc",
+              "/proc",
+              "--dev",
+              "/dev",
+              "--tmpfs",
+              "/tmp",
+              "--ro-bind",
+              "/tmp/aurora-task-copy-78fd4553-f1ce-4ce4-a265-09d01ddadbc1/baseline",
+              "/project",
+              "--bind",
+              "/tmp/aurora-task-copy-78fd4553-f1ce-4ce4-a265-09d01ddadbc1/baseline-scratch",
+              "/scratch",
+              "--chdir",
+              "/project",
+              "--clearenv",
+              "--setenv",
+              "TMPDIR",
+              "/scratch",
+              "--setenv",
+              "LANG",
+              "C",
+              "--setenv",
+              "TZ",
+              "UTC",
+              "--",
+              "/usr/bin/node",
+              "--test",
+              "tests/catalog.test.mjs"
+            ],
+            "sandboxCwd": "/project",
+            "scratch": "/tmp/aurora-task-copy-78fd4553-f1ce-4ce4-a265-09d01ddadbc1/baseline-scratch",
+            "timeout": 10000
+          },
+          {
+            "variant": "candidate",
+            "program": "/usr/bin/bwrap",
+            "cwd": "/tmp/aurora-task-copy-78fd4553-f1ce-4ce4-a265-09d01ddadbc1/candidate",
+            "args": [
+              "--unshare-all",
+              "--die-with-parent",
+              "--new-session",
+              "--cap-drop",
+              "ALL",
+              "--ro-bind",
+              "/usr",
+              "/usr",
+              "--symlink",
+              "usr/lib",
+              "/lib",
+              "--symlink",
+              "usr/lib",
+              "/lib64",
+              "--proc",
+              "/proc",
+              "--dev",
+              "/dev",
+              "--tmpfs",
+              "/tmp",
+              "--ro-bind",
+              "/tmp/aurora-task-copy-78fd4553-f1ce-4ce4-a265-09d01ddadbc1/candidate",
+              "/project",
+              "--bind",
+              "/tmp/aurora-task-copy-78fd4553-f1ce-4ce4-a265-09d01ddadbc1/candidate-scratch",
+              "/scratch",
+              "--chdir",
+              "/project",
+              "--clearenv",
+              "--setenv",
+              "TMPDIR",
+              "/scratch",
+              "--setenv",
+              "LANG",
+              "C",
+              "--setenv",
+              "TZ",
+              "UTC",
+              "--",
+              "/usr/bin/node",
+              "--test",
+              "tests/catalog.test.mjs"
+            ],
+            "sandboxCwd": "/project",
+            "scratch": "/tmp/aurora-task-copy-78fd4553-f1ce-4ce4-a265-09d01ddadbc1/candidate-scratch",
+            "timeout": 10000
+          }
+        ]
+      },
+      "result": {
+        "kind": "test_copy",
+        "fingerprint": "fde7775fc8591626a6b431449a14069a011d38ffe625bc9200948a94391c020a",
+        "snapshot": "71c99b1a409a90d5d4c7f7984c38b9aea7e3bf4720c752b5f30999dedddee682",
+        "repair": "R4.1",
+        "sourceRoot": "/tmp/aurora-project-copy-1yeHLL/project",
+        "sandboxRoot": "/project",
+        "candidate": {
+          "path": "/tmp/aurora-project-copy-1yeHLL/project/src/catalog.mjs",
+          "beforeRevision": "eaab441cbba06e7395ab165fa137bc111846d400f67a014705f47e5bf0742712",
+          "revision": "4b9b760e7c56982428dd1fec13976e2f163809e3e9f24f0a4e4e348a8507a86b"
+        },
+        "check": {
+          "program": "/usr/bin/node",
+          "args": [
+            "--test",
+            "tests/catalog.test.mjs"
+          ],
+          "cwd": "/tmp/aurora-project-copy-1yeHLL/project",
+          "outputIncludes": "pass 5"
+        },
+        "sources": [
+          {
+            "path": "/tmp/aurora-project-copy-1yeHLL/project/package.json",
+            "revision": "1239d4d885dcad42201a27ed9324f8f0f760b78700d8db9ced39a511cffe7eae"
+          },
+          {
+            "path": "/tmp/aurora-project-copy-1yeHLL/project/src/catalog.mjs",
+            "revision": "eaab441cbba06e7395ab165fa137bc111846d400f67a014705f47e5bf0742712"
+          },
+          {
+            "path": "/tmp/aurora-project-copy-1yeHLL/project/tests/catalog.test.mjs",
+            "revision": "6fe5a55ea893cf9d6e5f3d26bee5793886abf6f4b2b5a18c3821801ad5db3b19"
+          }
+        ],
+        "runs": [
+          {
+            "variant": "baseline",
+            "code": 1,
+            "signal": null,
+            "stopped": false,
+            "truncated": false,
+            "content": "\u2716 first page (2.729777ms)\n\u2716 later pages (0.355661ms)\n\u2714 empty and unchanged input (0.227669ms)\n\u2714 validation (0.499933ms)\n\u2714 other helpers unchanged (0.244431ms)\n\u2139 tests 5\n\u2139 suites 0\n\u2139 pass 3\n\u2139 fail 2\n\u2139 cancelled 0\n\u2139 skipped 0\n\u2139 todo 0\n\u2139 duration_ms 85.734173\n\n\u2716 failing tests:\n\ntest at tests/catalog.test.mjs:3:1\n\u2716 first page (2.729777ms)\n  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:\n  + actual - expected\n  \n    [\n  +   'c',\n  +   'd'\n  -   'a',\n  -   'b'\n    ]\n  \n      at TestContext.<anonymous> (file:///project/tests/catalog.test.mjs:3:30)\n      at Test.runInAsyncScope (node:async_hooks:227:14)\n      at Test.run (node:internal/test_runner/test:1402:25)\n      at Test.start (node:internal/test_runner/test:1262:17)\n      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {\n    generatedMessage: true,\n    code: 'ERR_ASSERTION',\n    actual: [ 'c', 'd' ],\n    expected: [ 'a', 'b' ],\n    operator: 'deepStrictEqual',\n    diff: 'simple'\n  }\n\ntest at tests/catalog.test.mjs:4:1\n\u2716 later pages (0.355661ms)\n  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:\n  + actual - expected\n  \n    [\n  +   'e'\n  -   'c',\n  -   'd'\n    ]\n  \n      at TestContext.<anonymous> (file:///project/tests/catalog.test.mjs:4:32)\n      at Test.runInAsyncScope (node:async_hooks:227:14)\n      at Test.run (node:internal/test_runner/test:1402:25)\n      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)\n      at Test.postRun (node:internal/test_runner/test:1542:19)\n      at Test.run (node:internal/test_runner/test:1467:12)\n      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {\n    generatedMessage: true,\n    code: 'ERR_ASSERTION',\n    actual: [ 'e' ],\n    expected: [ 'c', 'd' ],\n    operator: 'deepStrictEqual',\n    diff: 'simple'\n  }\n",
+            "marker": false,
+            "passed": false,
+            "outcome": "assertion_failure",
+            "changedFiles": []
+          },
+          {
+            "variant": "candidate",
+            "code": 0,
+            "signal": null,
+            "stopped": false,
+            "truncated": false,
+            "content": "\u2714 first page (1.59621ms)\n\u2714 later pages (0.19662ms)\n\u2714 empty and unchanged input (0.170451ms)\n\u2714 validation (0.488902ms)\n\u2714 other helpers unchanged (0.238019ms)\n\u2139 tests 5\n\u2139 suites 0\n\u2139 pass 5\n\u2139 fail 0\n\u2139 cancelled 0\n\u2139 skipped 0\n\u2139 todo 0\n\u2139 duration_ms 79.062173\n",
+            "marker": true,
+            "passed": true,
+            "outcome": "passed",
+            "changedFiles": []
+          }
+        ],
+        "notice": "Temporary-copy results cover the saved assertions only. Scope and missing dependencies need review. Original project checks, separate edit approval and final readback are still required.",
+        "content": "baseline: saved check did not pass (exit 1, marker absent).\ncandidate: saved check passed (exit 0, marker present).\nTemporary-copy results cover the saved assertions only. Scope and missing dependencies need review. Original project checks, separate edit approval and final readback are still required.\nOriginal project was not edited. Temporary copies removed.",
+        "cleanedUp": true,
+        "originalSourcesCurrent": true
+      }
+    }
+  ]
+}

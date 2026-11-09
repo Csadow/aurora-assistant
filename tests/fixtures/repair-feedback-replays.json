@@ -1,0 +1,466 @@
+[
+  {
+    "name": "multiline replacement",
+    "expected": {
+      "field": "after",
+      "code": "multiple_lines"
+    },
+    "requirements": {
+      "files": [
+        {
+          "path": "/tmp/aurora-binding-replay-AAAAAA/project/desktop/quick-window.mjs",
+          "lineEndings": "lf",
+          "finalNewline": "required"
+        },
+        {
+          "path": "/tmp/aurora-binding-replay-AAAAAA/project/desktop/placement.mjs",
+          "lineEndings": "lf",
+          "finalNewline": "required"
+        }
+      ],
+      "commands": [
+        {
+          "program": "/usr/bin/node",
+          "args": [
+            "--test",
+            "tests/quick-window.test.mjs"
+          ],
+          "cwd": "/tmp/aurora-binding-replay-AAAAAA/project",
+          "outputIncludes": "pass 2"
+        }
+      ]
+    },
+    "reads": [
+      {
+        "id": "472f4014-44b9-48cd-ab44-43f8aabf31b2",
+        "step": "182191ba-f5ff-4101-b74b-487c9ccec52b",
+        "revision": 1,
+        "name": "read_system_file",
+        "arguments": {
+          "path": "/tmp/aurora-binding-replay-AAAAAA/project/desktop/quick-window.mjs"
+        },
+        "status": "completed",
+        "started": "2026-10-17T18:16:56.071Z",
+        "result": {
+          "path": "/tmp/aurora-binding-replay-AAAAAA/project/desktop/quick-window.mjs",
+          "content": "import {readFile} from 'node:fs/promises';\nimport {atomic} from '../src/vault.mjs';\n\nexport function quickBounds(value,area){\n  const width=Math.max(value.width,area.width),height=Math.min(value.height,area.height);\n  const x=Number.isFinite(value.position?.x)?value.position.x:area.x+(area.width-width)/2;\n  const y=Number.isFinite(value.position?.y)?value.position.y:area.y+(area.height-height)/2;\n  return {width,height,x:Math.round(Math.max(area.x,Math.min(x,area.x+area.width-width))),y:Math.round(Math.max(area.y,Math.min(y,area.y+area.height-height)))};\n}\nexport class QuickWindowSettings{\n  constructor(file){this.file=file;this.value={width:460,height:680,position:null};this.queue=Promise.resolve();}\n  async init(){\n    try{const v=JSON.parse(await readFile(this.file,'utf8'));\n      for(const [key,min] of [['width',340],['height',360]])if(Number.isInteger(v[key])&&v[key]>=min&&v[key]<=8000)this.value[key]=v[key];\n      if(v.position&&['x','y'].every(k=>Number.isFinite(v.position[k])&&Math.abs(v.position[k])<100000))this.value.position={x:v.position.x,y:v.position.y,monitor:String(v.position.monitor||'').slice(0,100)};\n    }catch(e){if(e.code!=='ENOENT'&&!(e instanceof SyntaxError))throw e;}\n  }\n  async remember(bounds,monitor=''){\n    const next={width:Math.round(bounds.width),height:Math.round(bounds.height),position:{x:Math.round(bounds.x),y:Math.round(bounds.y),monitor}};\n    if(JSON.stringify(next)===JSON.stringify(this.value))return;\n    this.value=next;const content=JSON.stringify(next);\n    const job=this.queue.then(()=>atomic(this.file,content));this.queue=job.catch(()=>{});await job;\n  }\n}\n",
+          "revision": "e9ae399f357a5eb9d114d6f6dcb567cde1a4d02edcdcf8c4e0fc0d9fd8875d93",
+          "offset": 0,
+          "totalCharacters": 1627,
+          "nextOffset": null,
+          "truncated": false
+        },
+        "finished": "2026-10-17T18:16:56.074Z"
+      },
+      {
+        "id": "831b53e5-38c6-411c-937d-f3fa8e2a1ba8",
+        "step": "182191ba-f5ff-4101-b74b-487c9ccec52b",
+        "revision": 1,
+        "name": "read_system_file",
+        "arguments": {
+          "path": "/tmp/aurora-binding-replay-AAAAAA/project/desktop/placement.mjs"
+        },
+        "status": "completed",
+        "started": "2026-10-17T18:17:02.930Z",
+        "result": {
+          "path": "/tmp/aurora-binding-replay-AAAAAA/project/desktop/placement.mjs",
+          "content": "import {execFile} from 'node:child_process';\nimport {promisify} from 'node:util';\nconst run=promisify(execFile);\nexport const hyprland=!!(process.env.WAYLAND_DISPLAY&&process.env.HYPRLAND_INSTANCE_SIGNATURE);\n\nexport function monitorArea(m){\n  const rotated=m.transform%2===1;\n  const width=Math.round((rotated?m.height:m.width)/m.scale),height=Math.round((rotated?m.width:m.height)/m.scale);\n  const [left,top,right,bottom]=m.reserved||[0,0,0,0];\n  return {x:m.x+left,y:m.y+top,width:width+left+right,height:height-top-bottom};\n}\nexport async function desktopWindow(title){\n  const {stdout}=await run('hyprctl',['clients','-j'],{timeout:1500,maxBuffer:1024*1024});\n  const client=JSON.parse(stdout).find(c=>c.pid===process.pid&&c.title===title&&c.floating);\n  if(!client||!/^0x[0-9a-f]+$/i.test(client.address))return null;\n  const {stdout:monitors}=await run('hyprctl',['monitors','-j'],{timeout:1500,maxBuffer:1024*1024});\n  const displays=JSON.parse(monitors),monitor=displays.find(m=>m.id===client.monitor);\n  if(!monitor)return null;\n  return {client,monitor,displays,bounds:{x:client.at[0],y:client.at[1],width:client.size[0],height:client.size[1]}};\n}\nexport async function placeDesktopWindow(client,title,{x,y,width,height}){\n  // An address alone can be recycled. Check our PID and exact title again in the compositor.\n  const code=`local w=hl.get_window(\"address:${client.address}\"); if w and w.pid==${process.pid} and w.title==${JSON.stringify(title)} then hl.dispatch(hl.dsp.window.resize({x=${width},y=${height},window=w})); hl.dispatch(hl.dsp.window.move({x=${x},y=${y},window=w})); end`;\n  await run('hyprctl',['eval',code],{timeout:1500,maxBuffer:16384});\n}\n",
+          "revision": "0ad517f3b9c8c4db93a155be32e00077ebe0067da488699bbecb01e76b9d5244",
+          "offset": 0,
+          "totalCharacters": 1675,
+          "nextOffset": null,
+          "truncated": false
+        },
+        "finished": "2026-10-17T18:17:02.932Z"
+      },
+      {
+        "id": "ff3f1631-7047-4633-b32c-8661616409f3",
+        "step": "182191ba-f5ff-4101-b74b-487c9ccec52b",
+        "revision": 1,
+        "name": "read_system_file",
+        "arguments": {
+          "path": "/tmp/aurora-binding-replay-AAAAAA/project/tests/quick-window.test.mjs"
+        },
+        "status": "completed",
+        "started": "2026-10-17T18:17:12.938Z",
+        "result": {
+          "path": "/tmp/aurora-binding-replay-AAAAAA/project/tests/quick-window.test.mjs",
+          "content": "import test from 'node:test';\nimport assert from 'node:assert/strict';\nimport {mkdtemp,rm,writeFile} from 'node:fs/promises';\nimport {tmpdir} from 'node:os';\nimport {join} from 'node:path';\nimport {QuickWindowSettings,quickBounds} from '../desktop/quick-window.mjs';\nimport {monitorArea} from '../desktop/placement.mjs';\n\ntest('Quick ask restores independent geometry and clamps it after a monitor disappears',async t=>{\n  const dir=await mkdtemp(join(tmpdir(),'aurora-quick-layout-'));t.after(()=>rm(dir,{recursive:true,force:true}));\n  const file=join(dir,'quick-window.json'),settings=new QuickWindowSettings(file);await settings.init();\n  await settings.remember({x:2040,y:-900,width:700,height:900},'external');\n  const restarted=new QuickWindowSettings(file);await restarted.init();assert.deepEqual(restarted.value,settings.value);\n  const area={x:-1280,y:30,width:1280,height:690};assert.deepEqual(quickBounds(restarted.value,area),{x:-700,y:30,width:700,height:690});\n  await writeFile(file,JSON.stringify({width:99999,height:-12,position:{x:'wrong',y:0}}));\n  const invalid=new QuickWindowSettings(file);await invalid.init();assert.deepEqual(invalid.value,{width:460,height:680,position:null});\n});\ntest('placement uses scaled, rotated monitor work areas and fits small screens',()=>{\n  const area=monitorArea({x:-1000,y:0,width:1920,height:1080,scale:1.5,transform:1,reserved:[10,30,10,20]});\n  assert.deepEqual(area,{x:-990,y:30,width:700,height:1230});\n  assert.deepEqual(quickBounds({width:460,height:680,position:null},{x:0,y:0,width:320,height:350}),{x:0,y:0,width:320,height:350});\n});\n",
+          "revision": "d86a1ab111b7a03d06f294c6e140165227deee7ce1fe5a1485803cb4b7c57bdc",
+          "offset": 0,
+          "totalCharacters": 1602,
+          "nextOffset": null,
+          "truncated": false
+        },
+        "finished": "2026-10-17T18:17:12.939Z"
+      }
+    ],
+    "arguments": {
+      "repairs": [
+        {
+          "file": "/tmp/aurora-binding-replay-AAAAAA/project/desktop/quick-window.mjs",
+          "after": "const width=Math.min(value.width,area.width),height=Math.min(value.height,area.height);",
+          "before": "const width=Math.max(value.width,area.width),height=Math.min(value.height,area.height);",
+          "line": 5,
+          "reason": "quickBounds: saved window width 700 with area width 320 must clamp to 320 (min, not max), but saved width 460 correctly became 320 before. The test expects min behavior for both dimensions."
+        },
+        {
+          "file": "/tmp/aurora-binding-replay-AAAAAA/project/desktop/placement.mjs",
+          "after": "const physicalWidth=rotated?m.height:m.width,physicalHeight=rotated?m.width:m.height;\n  return {x:m.x+left,y:m.y+top,width:physicalWidth-left-right,height:physicalHeight-top-bottom};",
+          "before": "return {x:m.x+left,y:m.y+top,width:width+left+right,height:height-top-bottom};",
+          "line": 10,
+          "reason": "placement monitorArea: reserves must subtract from the physical monitor dimensions (not add to calculated scaled values) so that totalArea width 720 minus left/right=10 each gives area.width 700."
+        }
+      ]
+    }
+  },
+  {
+    "name": "reversed fragments",
+    "expected": {
+      "field": "before",
+      "code": "fragment_absent"
+    },
+    "requirements": {
+      "files": [
+        {
+          "path": "/tmp/aurora-binding-replay-AAAAAA/project/desktop/quick-window.mjs",
+          "lineEndings": "lf",
+          "finalNewline": "required"
+        },
+        {
+          "path": "/tmp/aurora-binding-replay-AAAAAA/project/desktop/placement.mjs",
+          "lineEndings": "lf",
+          "finalNewline": "required"
+        }
+      ],
+      "commands": [
+        {
+          "program": "/usr/bin/node",
+          "args": [
+            "--test",
+            "tests/quick-window.test.mjs"
+          ],
+          "cwd": "/tmp/aurora-binding-replay-AAAAAA/project",
+          "outputIncludes": "pass 2"
+        }
+      ]
+    },
+    "reads": [
+      {
+        "id": "472f4014-44b9-48cd-ab44-43f8aabf31b2",
+        "step": "182191ba-f5ff-4101-b74b-487c9ccec52b",
+        "revision": 1,
+        "name": "read_system_file",
+        "arguments": {
+          "path": "/tmp/aurora-binding-replay-AAAAAA/project/desktop/quick-window.mjs"
+        },
+        "status": "completed",
+        "started": "2026-10-17T18:16:56.071Z",
+        "result": {
+          "path": "/tmp/aurora-binding-replay-AAAAAA/project/desktop/quick-window.mjs",
+          "content": "import {readFile} from 'node:fs/promises';\nimport {atomic} from '../src/vault.mjs';\n\nexport function quickBounds(value,area){\n  const width=Math.max(value.width,area.width),height=Math.min(value.height,area.height);\n  const x=Number.isFinite(value.position?.x)?value.position.x:area.x+(area.width-width)/2;\n  const y=Number.isFinite(value.position?.y)?value.position.y:area.y+(area.height-height)/2;\n  return {width,height,x:Math.round(Math.max(area.x,Math.min(x,area.x+area.width-width))),y:Math.round(Math.max(area.y,Math.min(y,area.y+area.height-height)))};\n}\nexport class QuickWindowSettings{\n  constructor(file){this.file=file;this.value={width:460,height:680,position:null};this.queue=Promise.resolve();}\n  async init(){\n    try{const v=JSON.parse(await readFile(this.file,'utf8'));\n      for(const [key,min] of [['width',340],['height',360]])if(Number.isInteger(v[key])&&v[key]>=min&&v[key]<=8000)this.value[key]=v[key];\n      if(v.position&&['x','y'].every(k=>Number.isFinite(v.position[k])&&Math.abs(v.position[k])<100000))this.value.position={x:v.position.x,y:v.position.y,monitor:String(v.position.monitor||'').slice(0,100)};\n    }catch(e){if(e.code!=='ENOENT'&&!(e instanceof SyntaxError))throw e;}\n  }\n  async remember(bounds,monitor=''){\n    const next={width:Math.round(bounds.width),height:Math.round(bounds.height),position:{x:Math.round(bounds.x),y:Math.round(bounds.y),monitor}};\n    if(JSON.stringify(next)===JSON.stringify(this.value))return;\n    this.value=next;const content=JSON.stringify(next);\n    const job=this.queue.then(()=>atomic(this.file,content));this.queue=job.catch(()=>{});await job;\n  }\n}\n",
+          "revision": "e9ae399f357a5eb9d114d6f6dcb567cde1a4d02edcdcf8c4e0fc0d9fd8875d93",
+          "offset": 0,
+          "totalCharacters": 1627,
+          "nextOffset": null,
+          "truncated": false
+        },
+        "finished": "2026-10-17T18:16:56.074Z"
+      },
+      {
+        "id": "831b53e5-38c6-411c-937d-f3fa8e2a1ba8",
+        "step": "182191ba-f5ff-4101-b74b-487c9ccec52b",
+        "revision": 1,
+        "name": "read_system_file",
+        "arguments": {
+          "path": "/tmp/aurora-binding-replay-AAAAAA/project/desktop/placement.mjs"
+        },
+        "status": "completed",
+        "started": "2026-10-17T18:17:02.930Z",
+        "result": {
+          "path": "/tmp/aurora-binding-replay-AAAAAA/project/desktop/placement.mjs",
+          "content": "import {execFile} from 'node:child_process';\nimport {promisify} from 'node:util';\nconst run=promisify(execFile);\nexport const hyprland=!!(process.env.WAYLAND_DISPLAY&&process.env.HYPRLAND_INSTANCE_SIGNATURE);\n\nexport function monitorArea(m){\n  const rotated=m.transform%2===1;\n  const width=Math.round((rotated?m.height:m.width)/m.scale),height=Math.round((rotated?m.width:m.height)/m.scale);\n  const [left,top,right,bottom]=m.reserved||[0,0,0,0];\n  return {x:m.x+left,y:m.y+top,width:width+left+right,height:height-top-bottom};\n}\nexport async function desktopWindow(title){\n  const {stdout}=await run('hyprctl',['clients','-j'],{timeout:1500,maxBuffer:1024*1024});\n  const client=JSON.parse(stdout).find(c=>c.pid===process.pid&&c.title===title&&c.floating);\n  if(!client||!/^0x[0-9a-f]+$/i.test(client.address))return null;\n  const {stdout:monitors}=await run('hyprctl',['monitors','-j'],{timeout:1500,maxBuffer:1024*1024});\n  const displays=JSON.parse(monitors),monitor=displays.find(m=>m.id===client.monitor);\n  if(!monitor)return null;\n  return {client,monitor,displays,bounds:{x:client.at[0],y:client.at[1],width:client.size[0],height:client.size[1]}};\n}\nexport async function placeDesktopWindow(client,title,{x,y,width,height}){\n  // An address alone can be recycled. Check our PID and exact title again in the compositor.\n  const code=`local w=hl.get_window(\"address:${client.address}\"); if w and w.pid==${process.pid} and w.title==${JSON.stringify(title)} then hl.dispatch(hl.dsp.window.resize({x=${width},y=${height},window=w})); hl.dispatch(hl.dsp.window.move({x=${x},y=${y},window=w})); end`;\n  await run('hyprctl',['eval',code],{timeout:1500,maxBuffer:16384});\n}\n",
+          "revision": "0ad517f3b9c8c4db93a155be32e00077ebe0067da488699bbecb01e76b9d5244",
+          "offset": 0,
+          "totalCharacters": 1675,
+          "nextOffset": null,
+          "truncated": false
+        },
+        "finished": "2026-10-17T18:17:02.932Z"
+      },
+      {
+        "id": "ff3f1631-7047-4633-b32c-8661616409f3",
+        "step": "182191ba-f5ff-4101-b74b-487c9ccec52b",
+        "revision": 1,
+        "name": "read_system_file",
+        "arguments": {
+          "path": "/tmp/aurora-binding-replay-AAAAAA/project/tests/quick-window.test.mjs"
+        },
+        "status": "completed",
+        "started": "2026-10-17T18:17:12.938Z",
+        "result": {
+          "path": "/tmp/aurora-binding-replay-AAAAAA/project/tests/quick-window.test.mjs",
+          "content": "import test from 'node:test';\nimport assert from 'node:assert/strict';\nimport {mkdtemp,rm,writeFile} from 'node:fs/promises';\nimport {tmpdir} from 'node:os';\nimport {join} from 'node:path';\nimport {QuickWindowSettings,quickBounds} from '../desktop/quick-window.mjs';\nimport {monitorArea} from '../desktop/placement.mjs';\n\ntest('Quick ask restores independent geometry and clamps it after a monitor disappears',async t=>{\n  const dir=await mkdtemp(join(tmpdir(),'aurora-quick-layout-'));t.after(()=>rm(dir,{recursive:true,force:true}));\n  const file=join(dir,'quick-window.json'),settings=new QuickWindowSettings(file);await settings.init();\n  await settings.remember({x:2040,y:-900,width:700,height:900},'external');\n  const restarted=new QuickWindowSettings(file);await restarted.init();assert.deepEqual(restarted.value,settings.value);\n  const area={x:-1280,y:30,width:1280,height:690};assert.deepEqual(quickBounds(restarted.value,area),{x:-700,y:30,width:700,height:690});\n  await writeFile(file,JSON.stringify({width:99999,height:-12,position:{x:'wrong',y:0}}));\n  const invalid=new QuickWindowSettings(file);await invalid.init();assert.deepEqual(invalid.value,{width:460,height:680,position:null});\n});\ntest('placement uses scaled, rotated monitor work areas and fits small screens',()=>{\n  const area=monitorArea({x:-1000,y:0,width:1920,height:1080,scale:1.5,transform:1,reserved:[10,30,10,20]});\n  assert.deepEqual(area,{x:-990,y:30,width:700,height:1230});\n  assert.deepEqual(quickBounds({width:460,height:680,position:null},{x:0,y:0,width:320,height:350}),{x:0,y:0,width:320,height:350});\n});\n",
+          "revision": "d86a1ab111b7a03d06f294c6e140165227deee7ce1fe5a1485803cb4b7c57bdc",
+          "offset": 0,
+          "totalCharacters": 1602,
+          "nextOffset": null,
+          "truncated": false
+        },
+        "finished": "2026-10-17T18:17:12.939Z"
+      }
+    ],
+    "arguments": {
+      "repairs": [
+        {
+          "file": "/tmp/aurora-binding-replay-AAAAAA/project/desktop/quick-window.mjs",
+          "after": "const width=Math.min(value.width,area.width),height=Math.min(value.height,area.height);",
+          "before": "const width=Math.max(value.width,area.width),height=Math.min(value.height,area.height);",
+          "line": 5,
+          "reason": "quickBounds: saved window width 700 with area width 1280 must stay 700 (min), but saved width 460 correctly became 320 before. The test expects min behavior for both dimensions to match line 15's invalid.json case."
+        },
+        {
+          "file": "/tmp/aurora-binding-replay-AAAAAA/project/desktop/placement.mjs",
+          "after": "return {x:m.x+left,y:m.y+top,width:width+left+right,height:height-top-bottom};",
+          "before": "return {x:m.x+left,y:m.y+top,width:width-left-right,height:height-top-bottom};",
+          "line": 10,
+          "reason": "placement monitorArea: reserves must subtract from the physical monitor dimensions (not add) so that totalArea width 720 minus left/right=10 each gives area.width 700."
+        }
+      ]
+    }
+  },
+  {
+    "name": "supporting test selected",
+    "expected": {
+      "field": "file",
+      "code": "output_file"
+    },
+    "requirements": {
+      "files": [
+        {
+          "path": "/tmp/aurora-binding-replay-AAAAAA/project/desktop/quick-window.mjs",
+          "lineEndings": "lf",
+          "finalNewline": "required"
+        },
+        {
+          "path": "/tmp/aurora-binding-replay-AAAAAA/project/desktop/placement.mjs",
+          "lineEndings": "lf",
+          "finalNewline": "required"
+        }
+      ],
+      "commands": [
+        {
+          "program": "/usr/bin/node",
+          "args": [
+            "--test",
+            "tests/quick-window.test.mjs"
+          ],
+          "cwd": "/tmp/aurora-binding-replay-AAAAAA/project",
+          "outputIncludes": "pass 2"
+        }
+      ]
+    },
+    "reads": [
+      {
+        "id": "1c8a8411-b889-4f04-b455-7ada7a312e7d",
+        "step": "d13bf820-a218-4b32-b57f-99f15fa2226d",
+        "revision": 1,
+        "name": "read_system_file",
+        "arguments": {
+          "path": "/tmp/aurora-binding-replay-AAAAAA/project/desktop/quick-window.mjs"
+        },
+        "status": "completed",
+        "started": "2026-10-17T18:03:32.133Z",
+        "result": {
+          "path": "/tmp/aurora-binding-replay-AAAAAA/project/desktop/quick-window.mjs",
+          "content": "import {readFile} from 'node:fs/promises';\nimport {atomic} from '../src/vault.mjs';\n\nexport function quickBounds(value,area){\n  const width=Math.max(value.width,area.width),height=Math.min(value.height,area.height);\n  const x=Number.isFinite(value.position?.x)?value.position.x:area.x+(area.width-width)/2;\n  const y=Number.isFinite(value.position?.y)?value.position.y:area.y+(area.height-height)/2;\n  return {width,height,x:Math.round(Math.max(area.x,Math.min(x,area.x+area.width-width))),y:Math.round(Math.max(area.y,Math.min(y,area.y+area.height-height)))};\n}\nexport class QuickWindowSettings{\n  constructor(file){this.file=file;this.value={width:460,height:680,position:null};this.queue=Promise.resolve();}\n  async init(){\n    try{const v=JSON.parse(await readFile(this.file,'utf8'));\n      for(const [key,min] of [['width',340],['height',360]])if(Number.isInteger(v[key])&&v[key]>=min&&v[key]<=8000)this.value[key]=v[key];\n      if(v.position&&['x','y'].every(k=>Number.isFinite(v.position[k])&&Math.abs(v.position[k])<100000))this.value.position={x:v.position.x,y:v.position.y,monitor:String(v.position.monitor||'').slice(0,100)};\n    }catch(e){if(e.code!=='ENOENT'&&!(e instanceof SyntaxError))throw e;}\n  }\n  async remember(bounds,monitor=''){\n    const next={width:Math.round(bounds.width),height:Math.round(bounds.height),position:{x:Math.round(bounds.x),y:Math.round(bounds.y),monitor}};\n    if(JSON.stringify(next)===JSON.stringify(this.value))return;\n    this.value=next;const content=JSON.stringify(next);\n    const job=this.queue.then(()=>atomic(this.file,content));this.queue=job.catch(()=>{});await job;\n  }\n}\n",
+          "revision": "e9ae399f357a5eb9d114d6f6dcb567cde1a4d02edcdcf8c4e0fc0d9fd8875d93",
+          "offset": 0,
+          "totalCharacters": 1627,
+          "nextOffset": null,
+          "truncated": false
+        },
+        "finished": "2026-10-17T18:03:32.134Z"
+      },
+      {
+        "id": "366d73fb-3b6c-44e6-9c12-e68664ef8e28",
+        "step": "d13bf820-a218-4b32-b57f-99f15fa2226d",
+        "revision": 1,
+        "name": "read_system_file",
+        "arguments": {
+          "path": "/tmp/aurora-binding-replay-AAAAAA/project/desktop/placement.mjs"
+        },
+        "status": "completed",
+        "started": "2026-10-17T18:03:38.871Z",
+        "result": {
+          "path": "/tmp/aurora-binding-replay-AAAAAA/project/desktop/placement.mjs",
+          "content": "import {execFile} from 'node:child_process';\nimport {promisify} from 'node:util';\nconst run=promisify(execFile);\nexport const hyprland=!!(process.env.WAYLAND_DISPLAY&&process.env.HYPRLAND_INSTANCE_SIGNATURE);\n\nexport function monitorArea(m){\n  const rotated=m.transform%2===1;\n  const width=Math.round((rotated?m.height:m.width)/m.scale),height=Math.round((rotated?m.width:m.height)/m.scale);\n  const [left,top,right,bottom]=m.reserved||[0,0,0,0];\n  return {x:m.x+left,y:m.y+top,width:width+left+right,height:height-top-bottom};\n}\nexport async function desktopWindow(title){\n  const {stdout}=await run('hyprctl',['clients','-j'],{timeout:1500,maxBuffer:1024*1024});\n  const client=JSON.parse(stdout).find(c=>c.pid===process.pid&&c.title===title&&c.floating);\n  if(!client||!/^0x[0-9a-f]+$/i.test(client.address))return null;\n  const {stdout:monitors}=await run('hyprctl',['monitors','-j'],{timeout:1500,maxBuffer:1024*1024});\n  const displays=JSON.parse(monitors),monitor=displays.find(m=>m.id===client.monitor);\n  if(!monitor)return null;\n  return {client,monitor,displays,bounds:{x:client.at[0],y:client.at[1],width:client.size[0],height:client.size[1]}};\n}\nexport async function placeDesktopWindow(client,title,{x,y,width,height}){\n  // An address alone can be recycled. Check our PID and exact title again in the compositor.\n  const code=`local w=hl.get_window(\"address:${client.address}\"); if w and w.pid==${process.pid} and w.title==${JSON.stringify(title)} then hl.dispatch(hl.dsp.window.resize({x=${width},y=${height},window=w})); hl.dispatch(hl.dsp.window.move({x=${x},y=${y},window=w})); end`;\n  await run('hyprctl',['eval',code],{timeout:1500,maxBuffer:16384});\n}\n",
+          "revision": "0ad517f3b9c8c4db93a155be32e00077ebe0067da488699bbecb01e76b9d5244",
+          "offset": 0,
+          "totalCharacters": 1675,
+          "nextOffset": null,
+          "truncated": false
+        },
+        "finished": "2026-10-17T18:03:38.871Z"
+      },
+      {
+        "id": "0e5464ce-37d2-4c44-93c3-7ad06c85d6dd",
+        "step": "d13bf820-a218-4b32-b57f-99f15fa2226d",
+        "revision": 1,
+        "name": "read_system_file",
+        "arguments": {
+          "path": "/tmp/aurora-binding-replay-AAAAAA/project/tests/quick-window.test.mjs"
+        },
+        "status": "completed",
+        "started": "2026-10-17T18:04:18.505Z",
+        "result": {
+          "path": "/tmp/aurora-binding-replay-AAAAAA/project/tests/quick-window.test.mjs",
+          "content": "import test from 'node:test';\nimport assert from 'node:assert/strict';\nimport {mkdtemp,rm,writeFile} from 'node:fs/promises';\nimport {tmpdir} from 'node:os';\nimport {join} from 'node:path';\nimport {QuickWindowSettings,quickBounds} from '../desktop/quick-window.mjs';\nimport {monitorArea} from '../desktop/placement.mjs';\n\ntest('Quick ask restores independent geometry and clamps it after a monitor disappears',async t=>{\n  const dir=await mkdtemp(join(tmpdir(),'aurora-quick-layout-'));t.after(()=>rm(dir,{recursive:true,force:true}));\n  const file=join(dir,'quick-window.json'),settings=new QuickWindowSettings(file);await settings.init();\n  await settings.remember({x:2040,y:-900,width:700,height:900},'external');\n  const restarted=new QuickWindowSettings(file);await restarted.init();assert.deepEqual(restarted.value,settings.value);\n  const area={x:-1280,y:30,width:1280,height:690};assert.deepEqual(quickBounds(restarted.value,area),{x:-700,y:30,width:700,height:690});\n  await writeFile(file,JSON.stringify({width:99999,height:-12,position:{x:'wrong',y:0}}));\n  const invalid=new QuickWindowSettings(file);await invalid.init();assert.deepEqual(invalid.value,{width:460,height:680,position:null});\n});\ntest('placement uses scaled, rotated monitor work areas and fits small screens',()=>{\n  const area=monitorArea({x:-1000,y:0,width:1920,height:1080,scale:1.5,transform:1,reserved:[10,30,10,20]});\n  assert.deepEqual(area,{x:-990,y:30,width:700,height:1230});\n  assert.deepEqual(quickBounds({width:460,height:680,position:null},{x:0,y:0,width:320,height:350}),{x:0,y:0,width:320,height:350});\n});\n",
+          "revision": "d86a1ab111b7a03d06f294c6e140165227deee7ce1fe5a1485803cb4b7c57bdc",
+          "offset": 0,
+          "totalCharacters": 1602,
+          "nextOffset": null,
+          "truncated": false
+        },
+        "finished": "2026-10-17T18:04:18.506Z"
+      }
+    ],
+    "arguments": {
+      "repairs": [
+        {
+          "file": "/tmp/aurora-binding-replay-AAAAAA/project/tests/quick-window.test.mjs",
+          "after": "assert.deepEqual(quickBounds(restarted.value,area),{x:-700,y:30,width:700,height:690});",
+          "before": "assert.deepEqual(quickBounds(restarted.value,area),{x:-700,y:30,width:700,height:690});",
+          "line": 14,
+          "reason": "The saved width 700 stays at 700 when area is 1280 - quickBounds must use min for width (clamp small) and max for height. Line 5 needs Math.max(value.width,area.width) to become Math.min(value.width,area.width)."
+        },
+        {
+          "file": "/tmp/aurora-binding-replay-AAAAAA/project/tests/quick-window.test.mjs",
+          "after": "assert.deepEqual(quickBounds({width:460,height:680,position:null},{x:0,y:0,width:320,height:350}),{x:0,y:0,width:320,height:350});",
+          "before": "assert.deepEqual(quickBounds({width:460,height:680,position:null},{x:0,y:0,width:320,height:350}),{x:0,y:0,width:320,height:350});",
+          "line": 21,
+          "reason": "Saved width 460 with area 320 becomes 320 - confirms Math.min needed for width. Line 5 in quick-window.mjs uses Math.max which clamps up incorrectly."
+        },
+        {
+          "file": "/tmp/aurora-binding-replay-AAAAAA/project/desktop/placement.mjs",
+          "after": "return {x:m.x+left,y:m.y+top,width:width-left-right,height:height-top-bottom};",
+          "before": "return {x:m.x+left,y:m.y+top,width:width+left+right,height:height-top-bottom};",
+          "line": 10,
+          "reason": "Monitor work-area width must subtract left/right margins from logical width (720-10-10=700), not add them. Line 10 in placement.mjs uses + instead of - for horizontal margins."
+        }
+      ]
+    }
+  },
+  {
+    "name": "wrong default margins",
+    "expected": "source_match_only",
+    "requirements": {
+      "files": [
+        {
+          "path": "/tmp/aurora-binding-replay-AAAAAA/project/desktop/quick-window.mjs",
+          "lineEndings": "lf",
+          "finalNewline": "required"
+        },
+        {
+          "path": "/tmp/aurora-binding-replay-AAAAAA/project/desktop/placement.mjs",
+          "lineEndings": "lf",
+          "finalNewline": "required"
+        }
+      ],
+      "commands": [
+        {
+          "program": "/usr/bin/node",
+          "args": [
+            "--test",
+            "tests/quick-window.test.mjs"
+          ],
+          "cwd": "/tmp/aurora-binding-replay-AAAAAA/project",
+          "outputIncludes": "pass 2"
+        }
+      ]
+    },
+    "reads": [
+      {
+        "id": "8c99209e-f4af-4984-ae37-8914ef3e62e8",
+        "step": "d9dd1745-85e1-4a03-b112-7d584953fc9f",
+        "revision": 1,
+        "name": "read_system_file",
+        "arguments": {
+          "path": "/tmp/aurora-binding-replay-AAAAAA/project/desktop/quick-window.mjs"
+        },
+        "status": "completed",
+        "started": "2026-10-17T18:11:23.658Z",
+        "result": {
+          "path": "/tmp/aurora-binding-replay-AAAAAA/project/desktop/quick-window.mjs",
+          "content": "import {readFile} from 'node:fs/promises';\nimport {atomic} from '../src/vault.mjs';\n\nexport function quickBounds(value,area){\n  const width=Math.max(value.width,area.width),height=Math.min(value.height,area.height);\n  const x=Number.isFinite(value.position?.x)?value.position.x:area.x+(area.width-width)/2;\n  const y=Number.isFinite(value.position?.y)?value.position.y:area.y+(area.height-height)/2;\n  return {width,height,x:Math.round(Math.max(area.x,Math.min(x,area.x+area.width-width))),y:Math.round(Math.max(area.y,Math.min(y,area.y+area.height-height)))};\n}\nexport class QuickWindowSettings{\n  constructor(file){this.file=file;this.value={width:460,height:680,position:null};this.queue=Promise.resolve();}\n  async init(){\n    try{const v=JSON.parse(await readFile(this.file,'utf8'));\n      for(const [key,min] of [['width',340],['height',360]])if(Number.isInteger(v[key])&&v[key]>=min&&v[key]<=8000)this.value[key]=v[key];\n      if(v.position&&['x','y'].every(k=>Number.isFinite(v.position[k])&&Math.abs(v.position[k])<100000))this.value.position={x:v.position.x,y:v.position.y,monitor:String(v.position.monitor||'').slice(0,100)};\n    }catch(e){if(e.code!=='ENOENT'&&!(e instanceof SyntaxError))throw e;}\n  }\n  async remember(bounds,monitor=''){\n    const next={width:Math.round(bounds.width),height:Math.round(bounds.height),position:{x:Math.round(bounds.x),y:Math.round(bounds.y),monitor}};\n    if(JSON.stringify(next)===JSON.stringify(this.value))return;\n    this.value=next;const content=JSON.stringify(next);\n    const job=this.queue.then(()=>atomic(this.file,content));this.queue=job.catch(()=>{});await job;\n  }\n}\n",
+          "revision": "e9ae399f357a5eb9d114d6f6dcb567cde1a4d02edcdcf8c4e0fc0d9fd8875d93",
+          "offset": 0,
+          "totalCharacters": 1627,
+          "nextOffset": null,
+          "truncated": false
+        },
+        "finished": "2026-10-17T18:11:23.660Z"
+      },
+      {
+        "id": "f71ae112-b2ea-4673-9ebf-af2957d82985",
+        "step": "d9dd1745-85e1-4a03-b112-7d584953fc9f",
+        "revision": 1,
+        "name": "read_system_file",
+        "arguments": {
+          "path": "/tmp/aurora-binding-replay-AAAAAA/project/desktop/placement.mjs"
+        },
+        "status": "completed",
+        "started": "2026-10-17T18:11:33.163Z",
+        "result": {
+          "path": "/tmp/aurora-binding-replay-AAAAAA/project/desktop/placement.mjs",
+          "content": "import {execFile} from 'node:child_process';\nimport {promisify} from 'node:util';\nconst run=promisify(execFile);\nexport const hyprland=!!(process.env.WAYLAND_DISPLAY&&process.env.HYPRLAND_INSTANCE_SIGNATURE);\n\nexport function monitorArea(m){\n  const rotated=m.transform%2===1;\n  const width=Math.round((rotated?m.height:m.width)/m.scale),height=Math.round((rotated?m.width:m.height)/m.scale);\n  const [left,top,right,bottom]=m.reserved||[0,0,0,0];\n  return {x:m.x+left,y:m.y+top,width:width+left+right,height:height-top-bottom};\n}\nexport async function desktopWindow(title){\n  const {stdout}=await run('hyprctl',['clients','-j'],{timeout:1500,maxBuffer:1024*1024});\n  const client=JSON.parse(stdout).find(c=>c.pid===process.pid&&c.title===title&&c.floating);\n  if(!client||!/^0x[0-9a-f]+$/i.test(client.address))return null;\n  const {stdout:monitors}=await run('hyprctl',['monitors','-j'],{timeout:1500,maxBuffer:1024*1024});\n  const displays=JSON.parse(monitors),monitor=displays.find(m=>m.id===client.monitor);\n  if(!monitor)return null;\n  return {client,monitor,displays,bounds:{x:client.at[0],y:client.at[1],width:client.size[0],height:client.size[1]}};\n}\nexport async function placeDesktopWindow(client,title,{x,y,width,height}){\n  // An address alone can be recycled. Check our PID and exact title again in the compositor.\n  const code=`local w=hl.get_window(\"address:${client.address}\"); if w and w.pid==${process.pid} and w.title==${JSON.stringify(title)} then hl.dispatch(hl.dsp.window.resize({x=${width},y=${height},window=w})); hl.dispatch(hl.dsp.window.move({x=${x},y=${y},window=w})); end`;\n  await run('hyprctl',['eval',code],{timeout:1500,maxBuffer:16384});\n}\n",
+          "revision": "0ad517f3b9c8c4db93a155be32e00077ebe0067da488699bbecb01e76b9d5244",
+          "offset": 0,
+          "totalCharacters": 1675,
+          "nextOffset": null,
+          "truncated": false
+        },
+        "finished": "2026-10-17T18:11:33.165Z"
+      },
+      {
+        "id": "55eb5614-6e78-4436-92d6-fa707f76a5c7",
+        "step": "d9dd1745-85e1-4a03-b112-7d584953fc9f",
+        "revision": 1,
+        "name": "read_system_file",
+        "arguments": {
+          "path": "/tmp/aurora-binding-replay-AAAAAA/project/tests/quick-window.test.mjs"
+        },
+        "status": "completed",
+        "started": "2026-10-17T18:11:40.382Z",
+        "result": {
+          "path": "/tmp/aurora-binding-replay-AAAAAA/project/tests/quick-window.test.mjs",
+          "content": "import test from 'node:test';\nimport assert from 'node:assert/strict';\nimport {mkdtemp,rm,writeFile} from 'node:fs/promises';\nimport {tmpdir} from 'node:os';\nimport {join} from 'node:path';\nimport {QuickWindowSettings,quickBounds} from '../desktop/quick-window.mjs';\nimport {monitorArea} from '../desktop/placement.mjs';\n\ntest('Quick ask restores independent geometry and clamps it after a monitor disappears',async t=>{\n  const dir=await mkdtemp(join(tmpdir(),'aurora-quick-layout-'));t.after(()=>rm(dir,{recursive:true,force:true}));\n  const file=join(dir,'quick-window.json'),settings=new QuickWindowSettings(file);await settings.init();\n  await settings.remember({x:2040,y:-900,width:700,height:900},'external');\n  const restarted=new QuickWindowSettings(file);await restarted.init();assert.deepEqual(restarted.value,settings.value);\n  const area={x:-1280,y:30,width:1280,height:690};assert.deepEqual(quickBounds(restarted.value,area),{x:-700,y:30,width:700,height:690});\n  await writeFile(file,JSON.stringify({width:99999,height:-12,position:{x:'wrong',y:0}}));\n  const invalid=new QuickWindowSettings(file);await invalid.init();assert.deepEqual(invalid.value,{width:460,height:680,position:null});\n});\ntest('placement uses scaled, rotated monitor work areas and fits small screens',()=>{\n  const area=monitorArea({x:-1000,y:0,width:1920,height:1080,scale:1.5,transform:1,reserved:[10,30,10,20]});\n  assert.deepEqual(area,{x:-990,y:30,width:700,height:1230});\n  assert.deepEqual(quickBounds({width:460,height:680,position:null},{x:0,y:0,width:320,height:350}),{x:0,y:0,width:320,height:350});\n});\n",
+          "revision": "d86a1ab111b7a03d06f294c6e140165227deee7ce1fe5a1485803cb4b7c57bdc",
+          "offset": 0,
+          "totalCharacters": 1602,
+          "nextOffset": null,
+          "truncated": false
+        },
+        "finished": "2026-10-17T18:11:40.383Z"
+      }
+    ],
+    "arguments": {
+      "repairs": [
+        {
+          "file": "/tmp/aurora-binding-replay-AAAAAA/project/desktop/quick-window.mjs",
+          "after": "const width=Math.min(value.width,area.width),height=Math.min(value.height,area.height);",
+          "before": "const width=Math.max(value.width,area.width),height=Math.min(value.height,area.height);",
+          "line": 5,
+          "reason": "Goal requires saved width 700 with area 1280 to stay 700, not grow to 1280. Math.max incorrectly enlarges window beyond saved size when area is larger."
+        },
+        {
+          "file": "/tmp/aurora-binding-replay-AAAAAA/project/desktop/placement.mjs",
+          "after": "const [left,top,right,bottom]=m.reserved||[10,30,10,20];",
+          "before": "const [left,top,right,bottom]=m.reserved||[0,0,0,0];",
+          "line": 9,
+          "reason": "Goal requires monitor work-area to subtract 10 from each side: width=720-10-10=700. The test passes default [0,0,0,0] but the real usage expects reserved margins applied when calculating area.width."
+        }
+      ]
+    }
+  }
+]

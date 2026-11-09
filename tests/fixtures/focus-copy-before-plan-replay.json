@@ -1,0 +1,185 @@
+{
+  "record": {
+    "id": "f2276928-44ed-4aed-b75e-c45d03980fee",
+    "version": 28,
+    "engine": "local",
+    "routineContinuation": false,
+    "revision": 1,
+    "goal": "Repair the copied evening focus review pending count. An unreviewed focus choice and a stale decision should remain pending; an exact matching saved decision should clear it. Keep other dates, timezones, non-focus choices and saved-review validation intact. Inspect source and tests, test each exact candidate in a temporary copy before editing, run the saved Focus review tests on the original copied project, verify the actual pass marker, and read the final source.",
+    "scope": "Only the disposable project at /tmp/aurora-focus-review-live-MxBLc5/project. Only src/focus-review.mjs may be edited. Preserve unrelated review behavior.",
+    "requirements": {
+      "files": [
+        {
+          "path": "/tmp/aurora-focus-review-live-MxBLc5/project/src/focus-review.mjs",
+          "lineEndings": "lf",
+          "finalNewline": "required"
+        }
+      ],
+      "commands": [
+        {
+          "program": "/usr/bin/node",
+          "args": [
+            "--test",
+            "tests/focus-review.test.mjs"
+          ],
+          "cwd": "/tmp/aurora-focus-review-live-MxBLc5/project",
+          "outputIncludes": "pass 5"
+        }
+      ]
+    },
+    "copyBeforeEdit": {
+      "name": "Focus review tests",
+      "check": {
+        "program": "/usr/bin/node",
+        "args": [
+          "--test",
+          "tests/focus-review.test.mjs"
+        ],
+        "cwd": "/tmp/aurora-focus-review-live-MxBLc5/project",
+        "outputIncludes": "pass 5"
+      }
+    },
+    "project": {
+      "id": "08d14a99-ffac-466f-9fea-95a71fbc2a05",
+      "name": "Copied focus review",
+      "notePath": "20 Projects/Focus review trial.md",
+      "folders": [
+        "/tmp/aurora-focus-review-live-MxBLc5/project"
+      ],
+      "checks": [
+        {
+          "name": "Focus review tests",
+          "program": "/usr/bin/node",
+          "args": [
+            "--test",
+            "tests/focus-review.test.mjs"
+          ],
+          "cwd": "/tmp/aurora-focus-review-live-MxBLc5/project",
+          "outputIncludes": "pass 5"
+        }
+      ],
+      "revision": 1,
+      "created": "2026-11-08T07:01:53.354Z",
+      "updated": "2026-11-08T07:01:53.354Z"
+    },
+    "status": "needs_help",
+    "steps": [
+      {
+        "title": "Complete the requested project outcome and verify the saved checks",
+        "check": "Satisfy the saved goal and latest user updates. Inspect current files, make only necessary reviewed changes, run every required check successfully, verify its output, then read every required output file. Inspection alone is not completion. Preserve previously completed effects.",
+        "id": "01cd34c7-6168-48e2-a30f-38405d7edd41",
+        "status": "running"
+      }
+    ],
+    "current": 0,
+    "operations": [
+      {
+        "id": "08299753-f9ec-4df9-b425-1cb6a558b349",
+        "step": "01cd34c7-6168-48e2-a30f-38405d7edd41",
+        "revision": 1,
+        "name": "read_system_file",
+        "arguments": {
+          "path": "/tmp/aurora-focus-review-live-MxBLc5/project/src/focus-review.mjs"
+        },
+        "status": "completed",
+        "started": "2026-11-08T07:01:59.267Z",
+        "result": {
+          "path": "/tmp/aurora-focus-review-live-MxBLc5/project/src/focus-review.mjs",
+          "content": "import {atomic,AppError,sha} from './vault.mjs';\nimport {validDate} from './task-meta.mjs';\nimport {localDay} from '../mobile/web/planner-core.js';\nimport {taskGraph,taskRef} from '../mobile/web/task-links.js';\n\nexport const focusHash=value=>sha(JSON.stringify(value??null));\nexport const focusSnapshot=t=>t?Object.fromEntries(['id','path','text','done','planDate','startTime','duration','due','remindAt','priority','project','parent','dependsOn','scheduleError'].map(k=>[k,t[k]??null])):null;\nconst uuid=s=>typeof s==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);\nconst object=v=>v&&typeof v==='object'&&!Array.isArray(v);\n\nexport function validFocusReviews(state){\n if(state.reviews===undefined)return true;\n if(!object(state.reviews))return false;\n return Object.entries(state.reviews).every(([key,day])=>object(day)&&validDate(day.date)&&typeof day.timezone==='string'&&key===day.timezone+'|'+day.date&&object(day.decisions)&&Object.entries(day.decisions).every(([id,r])=>uuid(id)&&object(r)&&['reviewed','reconsider'].includes(r.action)&&typeof r.choiceRevision==='string'&&typeof r.contextRevision==='string'&&typeof r.at==='string'&&Number.isFinite(Date.parse(r.at))&&validDate(r.decidedOn)&&r.decidedOn>=day.date&&(r.action==='reconsider'?validDate(r.until)&&r.until>r.decidedOn:r.until===null)));\n}\nexport function reviewDays(state,today,timezone){\n return Object.entries(state.days).filter(([,d])=>d.timezone===timezone&&d.date<=today).map(([key,d])=>{\n  const choices=Object.entries(d.choices).filter(([,c])=>c.action==='focus'),decisions=state.reviews?.[key]?.decisions||{};\n  return {date:d.date,total:choices.length,pending:choices.filter(([id,c])=>decisions[id]?.choiceRevision===focusHash(c)).length};\n }).filter(d=>d.total).sort((a,b)=>a.date.localeCompare(b.date));\n}\n// Review reminders compete with later explicit daily choices, never with task dates.\nexport function reviewInvitations(state,today,timezone,prior){\n for(const d of Object.values(state.reviews||{}).filter(d=>d.timezone===timezone))for(const [id,r] of Object.entries(d.decisions)){\n  if(r.action!=='reconsider'||r.decidedOn>=today||r.choiceRevision!==focusHash(state.days[timezone+'|'+d.date]?.choices[id]))continue;\n  const previous=prior.get(id);\n  if(!previous||r.at>previous.at||r.at===previous.at&&previous.date===d.date&&focusHash(state.days[timezone+'|'+d.date]?.choices[id])===r.choiceRevision)prior.set(id,{action:'later',until:r.until,at:r.at,date:r.decidedOn,reviewDate:d.date,task:r.task});\n }\n}\nexport async function buildFocusReview(focus,date,state){\n state??=await focus.read();const today=localDay(focus.now()),timezone=focus.timezone();date??=today;\n if(!validDate(date)||date>today)throw new AppError('Choose today or an earlier focus review date.');\n const key=timezone+'|'+date,choices=state.days[key]?.choices||{},decisions=state.reviews?.[key]?.decisions||{},tasks=await focus.vault.tasks(),graph=taskGraph(tasks),execution=await focus.taskWorkflows?.summary({includeResults:true})||[];\n const rows=Object.entries(choices).filter(([,c])=>c.action==='focus').map(([taskId,intention])=>{\n  const matches=tasks.filter(t=>t.id===taskId),task=matches.length===1?matches[0]:null;\n  const identityIssue=matches.length>1?'Duplicate task ID; repair the notes before planning.':!task?'Task is missing from active notes.':task.scheduleError?'Task metadata needs repair.':null;\n  const links=identityIssue?[]:execution.filter(e=>e.taskId===taskId),dependencyReasons=task?graph.states.get(taskRef(task))?.reasons||[]:[],choiceRevision=focusHash(intention),current=focusSnapshot(task);\n  const contextRevision=focusHash([choiceRevision,current,identityIssue,dependencyReasons,links.map(e=>[e.id,e.executionRevision]).sort()]);\n  const decision=decisions[taskId]?.choiceRevision===choiceRevision?decisions[taskId]:null;\n  return {taskId,text:task?.text||intention.task?.text||'Unavailable task',intention,choiceRevision,task:current,identityIssue,execution:links,dependencyReasons,contextRevision,decision,changed:focusHash(intention.task)!==focusHash(current)};\n });\n return {date,today,timezone,revision:focusHash(state),rows,days:reviewDays(state,today,timezone),pending:rows.filter(r=>!r.decision).length};\n}\nexport async function decideFocusReview(focus,input){return focus.vault.exclusive(async()=>{\n const {requestId,date,today,timezone,revision,taskId,contextRevision,action,until=null}=input;\n if(!uuid(requestId)||!uuid(taskId)||!['reviewed','reconsider'].includes(action)||typeof revision!=='string'||typeof contextRevision!=='string')throw new AppError('Choose a valid focus review decision.');\n const requestHash=focusHash({kind:'focus_review',date,today,timezone,revision,taskId,contextRevision,action,until}),state=await focus.read(),receipt=state.receipts.find(r=>r.id===requestId);\n if(receipt){if(receipt.hash!==requestHash)throw new AppError('This request was already used for another choice.',409);return {...await buildFocusReview(focus,date,state),alreadySaved:true};}\n const report=await buildFocusReview(focus,date,state),row=report.rows.find(r=>r.taskId===taskId);\n if(today!==report.today||timezone!==report.timezone||revision!==report.revision||!row||contextRevision!==row.contextRevision)throw new AppError('Focus, task, attempt, day or timezone changed. Reload the evening review before deciding.',409);\n if(action==='reconsider'&&(row.identityIssue||row.task?.done||!validDate(until)||until<=today))throw new AppError('Choose a future reconsideration date for a unique, valid, unfinished task.');\n const key=timezone+'|'+date;state.reviews??={};state.reviews[key]??={date,timezone,decisions:{}};\n state.reviews[key].decisions[taskId]={action,until:action==='reconsider'?until:null,at:focus.now().toISOString(),decidedOn:today,choiceRevision:row.choiceRevision,contextRevision,task:row.task};\n state.receipts.push({id:requestId,hash:requestHash});state.receipts=state.receipts.slice(-200);\n try{await atomic(focus.path,JSON.stringify(state,null,2),{beforeCommit:async()=>{\n  const fresh=await buildFocusReview(focus,date);\n  if(fresh.today!==today||fresh.timezone!==timezone||fresh.revision!==revision||fresh.rows.find(r=>r.taskId===taskId)?.contextRevision!==contextRevision)throw new AppError('Focus, task or attempt changed before saving. Reload the evening review.',409);\n }});\n await atomic(focus.marker,JSON.stringify({version:1}));return await buildFocusReview(focus,date,state);\n }catch(e){if(e.status)throw e;throw new AppError('The review decision could not be confirmed. It may already be saved; retry the same request before making another choice.',503);}\n});}\n\nexport async function verifyReviewFocus(planner,proposal){\n const changes=proposal.changes.filter(c=>c.focusChoice&&!proposal.saved.includes(c.before.path));if(!changes.length)return;\n const state=await planner.dailyFocus.read(),choices=state.days[proposal.timezone+'|'+proposal.reviewDate]?.choices||{};\n for(const c of changes)if(focusHash(choices[c.before.id])!==c.focusChoice)throw new AppError('The reviewed focus intention changed. Prepare a fresh evening review.',409);\n}\n",
+          "revision": "03fbc8d19ce0aa2e73cad6df0b05792a5dde948bc3fccb4cf43dab733c047b7f",
+          "offset": 0,
+          "totalCharacters": 7114,
+          "nextOffset": null,
+          "truncated": false
+        },
+        "finished": "2026-11-08T07:01:59.273Z"
+      },
+      {
+        "id": "1eb2cfe8-4c9e-4543-abe2-045eb2d57da9",
+        "step": "01cd34c7-6168-48e2-a30f-38405d7edd41",
+        "revision": 1,
+        "name": "read_system_file",
+        "arguments": {
+          "path": "/tmp/aurora-focus-review-live-MxBLc5/project/tests/focus-review.test.mjs"
+        },
+        "status": "completed",
+        "started": "2026-11-08T07:02:05.706Z",
+        "result": {
+          "path": "/tmp/aurora-focus-review-live-MxBLc5/project/tests/focus-review.test.mjs",
+          "content": "import test from 'node:test';\nimport assert from 'node:assert/strict';\nimport {reviewDays,focusHash,validFocusReviews} from '../src/focus-review.mjs';\nconst date='2099-01-02',zone='Asia/Atyrau',id='11111111-1111-4111-8111-111111111111',other='22222222-2222-4222-8222-222222222222';\nconst choice={action:'focus',task:{text:'Finish report'}};\nconst state=(choices,decisions={})=>({days:{[zone+'|'+date]:{date,timezone:zone,choices}},reviews:{[zone+'|'+date]:{date,timezone:zone,decisions}}});\ntest('unreviewed focus choices are pending',()=>assert.deepEqual(reviewDays(state({[id]:choice,[other]:{...choice,task:{text:'Read'}}}),date,zone),[{date,total:2,pending:2}]));\ntest('a matching saved decision clears the pending count',()=>assert.deepEqual(reviewDays(state({[id]:choice},{[id]:{choiceRevision:focusHash(choice)}}),date,zone),[{date,total:1,pending:0}]));\ntest('a stale decision remains pending after the choice changes',()=>assert.deepEqual(reviewDays(state({[id]:choice},{[id]:{choiceRevision:focusHash({action:'focus',task:{text:'Old'}})}}),date,zone),[{date,total:1,pending:1}]));\ntest('only focus choices from the selected day and timezone count',()=>{const s=state({[id]:choice,[other]:{action:'later'}});s.days['Other|'+date]={date,timezone:'Other',choices:{[other]:choice}};s.days[zone+'|2099-01-03']={date:'2099-01-03',timezone:zone,choices:{[other]:choice}};assert.deepEqual(reviewDays(s,date,zone),[{date,total:1,pending:1}]);});\ntest('the saved review validator still rejects malformed decisions',()=>{const s=state({[id]:choice});assert.equal(validFocusReviews(s),true);s.reviews[zone+'|'+date].decisions[id]={action:'reviewed'};assert.equal(validFocusReviews(s),false);});\n",
+          "revision": "6e91def5d3cd1b272e30472b32ae1a333462935f95fccd26c14bf282eb81b297",
+          "offset": 0,
+          "totalCharacters": 1693,
+          "nextOffset": null,
+          "truncated": false
+        },
+        "finished": "2026-11-08T07:02:05.709Z"
+      },
+      {
+        "id": "28fc6b87-a03c-4b26-9abe-e79cfd7e7bcf",
+        "step": "01cd34c7-6168-48e2-a30f-38405d7edd41",
+        "revision": 1,
+        "name": "inspect_source_lines",
+        "arguments": {
+          "evidence": "E1",
+          "startLine": 43,
+          "count": 25
+        },
+        "status": "completed",
+        "started": "2026-11-08T07:02:22.401Z",
+        "result": {
+          "sourceEvidence": "E1",
+          "path": "/tmp/aurora-focus-review-live-MxBLc5/project/src/focus-review.mjs",
+          "revision": "03fbc8d19ce0aa2e73cad6df0b05792a5dde948bc3fccb4cf43dab733c047b7f",
+          "startLine": 43,
+          "endLine": 59,
+          "totalLines": 67,
+          "nextLine": 60,
+          "numberedLines": "43: }\n44: export async function decideFocusReview(focus,input){return focus.vault.exclusive(async()=>{\n45:  const {requestId,date,today,timezone,revision,taskId,contextRevision,action,until=null}=input;\n46:  if(!uuid(requestId)||!uuid(taskId)||!['reviewed','reconsider'].includes(action)||typeof revision!=='string'||typeof contextRevision!=='string')throw new AppError('Choose a valid focus review decision.');\n47:  const requestHash=focusHash({kind:'focus_review',date,today,timezone,revision,taskId,contextRevision,action,until}),state=await focus.read(),receipt=state.receipts.find(r=>r.id===requestId);\n48:  if(receipt){if(receipt.hash!==requestHash)throw new AppError('This request was already used for another choice.',409);return {...await buildFocusReview(focus,date,state),alreadySaved:true};}\n49:  const report=await buildFocusReview(focus,date,state),row=report.rows.find(r=>r.taskId===taskId);\n50:  if(today!==report.today||timezone!==report.timezone||revision!==report.revision||!row||contextRevision!==row.contextRevision)throw new AppError('Focus, task, attempt, day or timezone changed. Reload the evening review before deciding.',409);\n51:  if(action==='reconsider'&&(row.identityIssue||row.task?.done||!validDate(until)||until<=today))throw new AppError('Choose a future reconsideration date for a unique, valid, unfinished task.');\n52:  const key=timezone+'|'+date;state.reviews??={};state.reviews[key]??={date,timezone,decisions:{}};\n53:  state.reviews[key].decisions[taskId]={action,until:action==='reconsider'?until:null,at:focus.now().toISOString(),decidedOn:today,choiceRevision:row.choiceRevision,contextRevision,task:row.task};\n54:  state.receipts.push({id:requestId,hash:requestHash});state.receipts=state.receipts.slice(-200);\n55:  try{await atomic(focus.path,JSON.stringify(state,null,2),{beforeCommit:async()=>{\n56:   const fresh=await buildFocusReview(focus,date);\n57:   if(fresh.today!==today||fresh.timezone!==timezone||fresh.revision!==revision||fresh.rows.find(r=>r.taskId===taskId)?.contextRevision!==contextRevision)throw new AppError('Focus, task or attempt changed before saving. Reload the evening review.',409);\n58:  }});\n59:  await atomic(focus.marker,JSON.stringify({version:1}));return await buildFocusReview(focus,date,state);",
+          "snapshotOnly": true,
+          "displayExcerpted": true,
+          "notice": "Excerpt of the saved source, not a fresh disk read or proof of completion. Line labels are not source text. Edits still require the complete source snapshot and exact approval."
+        },
+        "finished": "2026-11-08T07:02:22.404Z"
+      },
+      {
+        "id": "84afeca3-b4e1-41ef-ae8d-9135a211089a",
+        "step": "01cd34c7-6168-48e2-a30f-38405d7edd41",
+        "revision": 1,
+        "name": "read_system_file",
+        "arguments": {
+          "path": "/tmp/aurora-focus-review-live-MxBLc5/project/src/focus-review.mjs"
+        },
+        "status": "completed",
+        "started": "2026-11-08T07:03:26.801Z",
+        "result": {
+          "path": "/tmp/aurora-focus-review-live-MxBLc5/project/src/focus-review.mjs",
+          "content": "import {atomic,AppError,sha} from './vault.mjs';\nimport {validDate} from './task-meta.mjs';\nimport {localDay} from '../mobile/web/planner-core.js';\nimport {taskGraph,taskRef} from '../mobile/web/task-links.js';\n\nexport const focusHash=value=>sha(JSON.stringify(value??null));\nexport const focusSnapshot=t=>t?Object.fromEntries(['id','path','text','done','planDate','startTime','duration','due','remindAt','priority','project','parent','dependsOn','scheduleError'].map(k=>[k,t[k]??null])):null;\nconst uuid=s=>typeof s==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);\nconst object=v=>v&&typeof v==='object'&&!Array.isArray(v);\n\nexport function validFocusReviews(state){\n if(state.reviews===undefined)return true;\n if(!object(state.reviews))return false;\n return Object.entries(state.reviews).every(([key,day])=>object(day)&&validDate(day.date)&&typeof day.timezone==='string'&&key===day.timezone+'|'+day.date&&object(day.decisions)&&Object.entries(day.decisions).every(([id,r])=>uuid(id)&&object(r)&&['reviewed','reconsider'].includes(r.action)&&typeof r.choiceRevision==='string'&&typeof r.contextRevision==='string'&&typeof r.at==='string'&&Number.isFinite(Date.parse(r.at))&&validDate(r.decidedOn)&&r.decidedOn>=day.date&&(r.action==='reconsider'?validDate(r.until)&&r.until>r.decidedOn:r.until===null)));\n}\nexport function reviewDays(state,today,timezone){\n return Object.entries(state.days).filter(([,d])=>d.timezone===timezone&&d.date<=today).map(([key,d])=>{\n  const choices=Object.entries(d.choices).filter(([,c])=>c.action==='focus'),decisions=state.reviews?.[key]?.decisions||{};\n  return {date:d.date,total:choices.length,pending:choices.filter(([id,c])=>decisions[id]?.choiceRevision===focusHash(c)).length};\n }).filter(d=>d.total).sort((a,b)=>a.date.localeCompare(b.date));\n}\n// Review reminders compete with later explicit daily choices, never with task dates.\nexport function reviewInvitations(state,today,timezone,prior){\n for(const d of Object.values(state.reviews||{}).filter(d=>d.timezone===timezone))for(const [id,r] of Object.entries(d.decisions)){\n  if(r.action!=='reconsider'||r.decidedOn>=today||r.choiceRevision!==focusHash(state.days[timezone+'|'+d.date]?.choices[id]))continue;\n  const previous=prior.get(id);\n  if(!previous||r.at>previous.at||r.at===previous.at&&previous.date===d.date&&focusHash(state.days[timezone+'|'+d.date]?.choices[id])===r.choiceRevision)prior.set(id,{action:'later',until:r.until,at:r.at,date:r.decidedOn,reviewDate:d.date,task:r.task});\n }\n}\nexport async function buildFocusReview(focus,date,state){\n state??=await focus.read();const today=localDay(focus.now()),timezone=focus.timezone();date??=today;\n if(!validDate(date)||date>today)throw new AppError('Choose today or an earlier focus review date.');\n const key=timezone+'|'+date,choices=state.days[key]?.choices||{},decisions=state.reviews?.[key]?.decisions||{},tasks=await focus.vault.tasks(),graph=taskGraph(tasks),execution=await focus.taskWorkflows?.summary({includeResults:true})||[];\n const rows=Object.entries(choices).filter(([,c])=>c.action==='focus').map(([taskId,intention])=>{\n  const matches=tasks.filter(t=>t.id===taskId),task=matches.length===1?matches[0]:null;\n  const identityIssue=matches.length>1?'Duplicate task ID; repair the notes before planning.':!task?'Task is missing from active notes.':task.scheduleError?'Task metadata needs repair.':null;\n  const links=identityIssue?[]:execution.filter(e=>e.taskId===taskId),dependencyReasons=task?graph.states.get(taskRef(task))?.reasons||[]:[],choiceRevision=focusHash(intention),current=focusSnapshot(task);\n  const contextRevision=focusHash([choiceRevision,current,identityIssue,dependencyReasons,links.map(e=>[e.id,e.executionRevision]).sort()]);\n  const decision=decisions[taskId]?.choiceRevision===choiceRevision?decisions[taskId]:null;\n  return {taskId,text:task?.text||intention.task?.text||'Unavailable task',intention,choiceRevision,task:current,identityIssue,execution:links,dependencyReasons,contextRevision,decision,changed:focusHash(intention.task)!==focusHash(current)};\n });\n return {date,today,timezone,revision:focusHash(state),rows,days:reviewDays(state,today,timezone),pending:rows.filter(r=>!r.decision).length};\n}\nexport async function decideFocusReview(focus,input){return focus.vault.exclusive(async()=>{\n const {requestId,date,today,timezone,revision,taskId,contextRevision,action,until=null}=input;\n if(!uuid(requestId)||!uuid(taskId)||!['reviewed','reconsider'].includes(action)||typeof revision!=='string'||typeof contextRevision!=='string')throw new AppError('Choose a valid focus review decision.');\n const requestHash=focusHash({kind:'focus_review',date,today,timezone,revision,taskId,contextRevision,action,until}),state=await focus.read(),receipt=state.receipts.find(r=>r.id===requestId);\n if(receipt){if(receipt.hash!==requestHash)throw new AppError('This request was already used for another choice.',409);return {...await buildFocusReview(focus,date,state),alreadySaved:true};}\n const report=await buildFocusReview(focus,date,state),row=report.rows.find(r=>r.taskId===taskId);\n if(today!==report.today||timezone!==report.timezone||revision!==report.revision||!row||contextRevision!==row.contextRevision)throw new AppError('Focus, task, attempt, day or timezone changed. Reload the evening review before deciding.',409);\n if(action==='reconsider'&&(row.identityIssue||row.task?.done||!validDate(until)||until<=today))throw new AppError('Choose a future reconsideration date for a unique, valid, unfinished task.');\n const key=timezone+'|'+date;state.reviews??={};state.reviews[key]??={date,timezone,decisions:{}};\n state.reviews[key].decisions[taskId]={action,until:action==='reconsider'?until:null,at:focus.now().toISOString(),decidedOn:today,choiceRevision:row.choiceRevision,contextRevision,task:row.task};\n state.receipts.push({id:requestId,hash:requestHash});state.receipts=state.receipts.slice(-200);\n try{await atomic(focus.path,JSON.stringify(state,null,2),{beforeCommit:async()=>{\n  const fresh=await buildFocusReview(focus,date);\n  if(fresh.today!==today||fresh.timezone!==timezone||fresh.revision!==revision||fresh.rows.find(r=>r.taskId===taskId)?.contextRevision!==contextRevision)throw new AppError('Focus, task or attempt changed before saving. Reload the evening review.',409);\n }});\n await atomic(focus.marker,JSON.stringify({version:1}));return await buildFocusReview(focus,date,state);\n }catch(e){if(e.status)throw e;throw new AppError('The review decision could not be confirmed. It may already be saved; retry the same request before making another choice.',503);}\n});}\n\nexport async function verifyReviewFocus(planner,proposal){\n const changes=proposal.changes.filter(c=>c.focusChoice&&!proposal.saved.includes(c.before.path));if(!changes.length)return;\n const state=await planner.dailyFocus.read(),choices=state.days[proposal.timezone+'|'+proposal.reviewDate]?.choices||{};\n for(const c of changes)if(focusHash(choices[c.before.id])!==c.focusChoice)throw new AppError('The reviewed focus intention changed. Prepare a fresh evening review.',409);\n}\n",
+          "revision": "03fbc8d19ce0aa2e73cad6df0b05792a5dde948bc3fccb4cf43dab733c047b7f",
+          "offset": 0,
+          "totalCharacters": 7114,
+          "nextOffset": null,
+          "truncated": false
+        },
+        "finished": "2026-11-08T07:03:26.803Z"
+      },
+      {
+        "id": "c4434cd2-1e4c-42c5-9d77-f9c732e8a28b",
+        "step": "01cd34c7-6168-48e2-a30f-38405d7edd41",
+        "revision": 1,
+        "name": "propose_test_copy",
+        "arguments": {
+          "check": "C1",
+          "reason": "Test the pending count logic with current source before any edits"
+        },
+        "status": "failed",
+        "started": "2026-11-08T07:04:05.447Z",
+        "result": {
+          "error": "No copy was prepared. First save an observed correction with record_repair_plan. Then call propose_test_copy with ONLY its returned repair R-number and saved check C-number; omit before, after, filePath, line and reason."
+        },
+        "finished": "2026-11-08T07:04:05.450Z"
+      }
+    ],
+    "memorySources": []
+  }
+}

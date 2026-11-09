@@ -1,0 +1,333 @@
+{
+  "name": "missing_analysis",
+  "expected": "revise",
+  "rubric": [
+    "Explain 140 over 120, 110 under 120 with unresolved price authority, and 90 under 120; listing prices alone is incomplete.",
+    "Attach Orion capability evidence to the Orion conclusion."
+  ],
+  "provenance": {
+    "artifact": "research-workflow-live-2026-10-15T11-17-02-480Z.json",
+    "sha256": "0a3aaa80b1395ec1d6809d6cc7f5f19fb3c529b4b5e431dd022236032238a30e",
+    "round": 1,
+    "operation": 5,
+    "normalization": "Disposable absolute source folder replaced with /fixture/research; only task/source/draft fields retained. No memory or personal data."
+  },
+  "workflow": {
+    "version": 5,
+    "revision": 1,
+    "goal": "Read all four supplied sources and write a concise sourced decision note comparing Orion and Vega in /fixture/research/decision.md. Cite every source using a Markdown link to its exact filename. Include one exact quoted sentence from each source. Distinguish the two conflicting Orion prices, explain the budget/offline-editing tradeoff, and state that migration duration is unknown. Do not resolve the price conflict or invent a migration duration. Read the saved note back before finishing. Do not ask me to resolve the conflict; the deliverable should explicitly retain it.",
+    "scope": "Read only /fixture/research/requirements.md, /fixture/research/orion-quote.md, /fixture/research/orion-catalog.md, /fixture/research/vega-catalog.md and /fixture/research/decision.md. Write only /fixture/research/decision.md. No commands, browser, cloud or other actions.",
+    "directives": [],
+    "requirements": {
+      "files": [
+        {
+          "path": "/fixture/research/decision.md",
+          "finalNewline": "required",
+          "lineEndings": "lf",
+          "sourceReview": true,
+          "requiredText": [
+            "The monthly budget ceiling is 120 credits.",
+            "](requirements.md)",
+            "Orion costs 140 credits per month.",
+            "](orion-quote.md)",
+            "Orion costs 110 credits per month.",
+            "](orion-catalog.md)",
+            "Vega costs 90 credits per month.",
+            "](vega-catalog.md)"
+          ],
+          "draftCritique": true
+        }
+      ],
+      "commands": []
+    },
+    "model": "qwen3.5:9b",
+    "generation": {
+      "think": true,
+      "num_predict": 6144,
+      "num_ctx": 12288
+    },
+    "operations": [
+      {
+        "id": "378f71c6-a306-4634-8713-280ba961d3a0",
+        "revision": 1,
+        "name": "read_system_file",
+        "arguments": {
+          "path": "/fixture/research/requirements.md"
+        },
+        "status": "completed",
+        "result": {
+          "path": "/fixture/research/requirements.md",
+          "content": "# requirements.md\n\nThe owner needs offline editing and portable Markdown export. The monthly budget ceiling is 120 credits.\n",
+          "revision": "dbfc4ce757771972874b67602a8330e88085848a334da7f497cfdb4b82ab22a2",
+          "offset": 0,
+          "totalCharacters": 124,
+          "nextOffset": null,
+          "truncated": false
+        }
+      },
+      {
+        "id": "9545668e-839d-4056-85b2-cbd4dd926842",
+        "revision": 1,
+        "name": "read_system_file",
+        "arguments": {
+          "path": "/fixture/research/orion-quote.md"
+        },
+        "status": "completed",
+        "result": {
+          "path": "/fixture/research/orion-quote.md",
+          "content": "# orion-quote.md\n\nVendor quote for this trimester: Orion costs 140 credits per month. Orion offers offline editing and Markdown export.\n",
+          "revision": "5d7ab3e81411648f07267b7a5234c187b34cb6d098104d565deb06187d77ecfd",
+          "offset": 0,
+          "totalCharacters": 136,
+          "nextOffset": null,
+          "truncated": false
+        }
+      },
+      {
+        "id": "64877d6e-efc7-475d-820e-fa0ca2c37d06",
+        "revision": 1,
+        "name": "read_system_file",
+        "arguments": {
+          "path": "/fixture/research/orion-catalog.md"
+        },
+        "status": "completed",
+        "result": {
+          "path": "/fixture/research/orion-catalog.md",
+          "content": "# orion-catalog.md\n\nVendor catalog for the same trimester: Orion costs 110 credits per month. This conflicts with the quote. No source establishes which price is current.\n",
+          "revision": "04614a0bb18057260ada7f25e79b6759068cc3d0bc1cccb6a7da327207be52ee",
+          "offset": 0,
+          "totalCharacters": 171,
+          "nextOffset": null,
+          "truncated": false
+        }
+      },
+      {
+        "id": "db079afc-8862-4e3b-bf3a-1993e3c70e97",
+        "revision": 1,
+        "name": "read_system_file",
+        "arguments": {
+          "path": "/fixture/research/vega-catalog.md"
+        },
+        "status": "completed",
+        "result": {
+          "path": "/fixture/research/vega-catalog.md",
+          "content": "# vega-catalog.md\n\nVega costs 90 credits per month. Vega exports Markdown but requires an internet connection for editing. No source supplies migration duration.\n",
+          "revision": "e211d77c71f9d6246697c204bf844443820bb09bcaa1b7eff3eb72773196466a",
+          "offset": 0,
+          "totalCharacters": 162,
+          "nextOffset": null,
+          "truncated": false
+        }
+      },
+      {
+        "id": "07dc9eff-fb1b-4ed1-b543-293539f0604c",
+        "revision": 1,
+        "name": "read_system_file",
+        "arguments": {
+          "path": "/fixture/research/decision.md"
+        },
+        "status": "failed",
+        "result": {
+          "error": "Path not found.",
+          "expectedArguments": {
+            "tool": "read_system_file",
+            "fields": {
+              "path": {
+                "type": "string"
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "path"
+            ],
+            "notice": "Use these exact field names. Arrays are JSON arrays, not strings. Rejected proposals performed no action."
+          }
+        }
+      },
+      {
+        "id": "b35e78b7-c0dc-4d0c-be52-9618a589d12a",
+        "revision": 1,
+        "name": "propose_file_edit",
+        "arguments": {
+          "path": "/fixture/research/decision.md",
+          "reason": "Creating the decision note comparing Orion and Vega per requirements, citing all four sources with exact quotes.",
+          "content": "# Source review\n\n## Source statement\n\nThe monthly budget ceiling is 120 credits.\n\nLimits: From requirements.md: 'The monthly budget ceiling is 120 credits.'\n\n[requirements.md](requirements.md)\n\n## Source statement\n\nOrion costs 140 credits per month.\n\nLimits: From orion-quote.md: 'Orion costs 140 credits per month. Orion offers offline editing and Markdown export.'\n\n[orion-quote.md](orion-quote.md)\n\n## Source statement\n\nOrion costs 110 credits per month.\n\nLimits: From orion-catalog.md: 'Orion costs 110 credits per month. This conflicts with the quote. No source establishes which price is current.'\n\n[orion-catalog.md](orion-catalog.md)\n\n## Source statement\n\nVega costs 90 credits per month.\n\nLimits: From vega-catalog.md: 'Vega costs 90 credits per month. Vega exports Markdown but requires an internet connection for editing.'\n\n[vega-catalog.md](vega-catalog.md)\n\n## Inference / recommendation\n\nOrion's offline editing and portable Markdown export meet the requirements; Vega's internet requirement conflicts.\n\nLimits: Based on E1 (offline editing required) and E4 (Vega requires internet connection for editing).\n\n[requirements.md](requirements.md)\n\n[vega-catalog.md](vega-catalog.md)\n\n## Inference / recommendation\n\nNeither source establishes a migration duration for switching from Orion to Vega.\n\nLimits: E3 states 'No source establishes which price is current' and E4 notes 'No source supplies migration duration.'\n\n[orion-catalog.md](orion-catalog.md)\n\n[vega-catalog.md](vega-catalog.md)\n\n## Source excerpts\n\n[requirements.md](requirements.md)\n\n> # requirements.md\n> \n> The owner needs offline editing and portable Markdown export. The monthly budget ceiling is 120 credits.\n> \n\n[orion-quote.md](orion-quote.md)\n\n> # orion-quote.md\n> \n> Vendor quote for this trimester: Orion costs 140 credits per month. Orion offers offline editing and Markdown export.\n> \n\n[orion-catalog.md](orion-catalog.md)\n\n> # orion-catalog.md\n> \n> Vendor catalog for the same trimester: Orion costs 110 credits per month. This conflicts with the quote. No source establishes which price is current.\n> \n\n[vega-catalog.md](vega-catalog.md)\n\n> # vega-catalog.md\n> \n> Vega costs 90 credits per month. Vega exports Markdown but requires an internet connection for editing. No source supplies migration duration.\n> \n\n## Reviewed source set\n\n- [requirements.md](requirements.md)\n- [orion-quote.md](orion-quote.md)\n- [orion-catalog.md](orion-catalog.md)\n- [vega-catalog.md](vega-catalog.md)\n\nThese classifications and conclusions are Aurora’s assessments of the listed sources. Exact excerpts do not prove that an inference is correct or that a source is true.\n"
+        },
+        "requestedTool": "propose_sourced_file",
+        "status": "started",
+        "claimInputs": [
+          {
+            "evidence": "E1",
+            "kind": "source_statement",
+            "limits": "From requirements.md: 'The monthly budget ceiling is 120 credits.'",
+            "text": "The monthly budget ceiling is 120 credits."
+          },
+          {
+            "evidence": "E2",
+            "kind": "source_statement",
+            "limits": "From orion-quote.md: 'Orion costs 140 credits per month. Orion offers offline editing and Markdown export.'",
+            "text": "Orion costs 140 credits per month."
+          },
+          {
+            "evidence": "E3",
+            "kind": "source_statement",
+            "limits": "From orion-catalog.md: 'Orion costs 110 credits per month. This conflicts with the quote. No source establishes which price is current.'",
+            "text": "Orion costs 110 credits per month."
+          },
+          {
+            "evidence": "E4",
+            "kind": "source_statement",
+            "limits": "From vega-catalog.md: 'Vega costs 90 credits per month. Vega exports Markdown but requires an internet connection for editing.'",
+            "text": "Vega costs 90 credits per month."
+          },
+          {
+            "evidence": "E1 E4",
+            "kind": "inference",
+            "limits": "Based on E1 (offline editing required) and E4 (Vega requires internet connection for editing).",
+            "text": "Orion's offline editing and portable Markdown export meet the requirements; Vega's internet requirement conflicts."
+          },
+          {
+            "evidence": "E3 E4",
+            "kind": "inference",
+            "limits": "E3 states 'No source establishes which price is current' and E4 notes 'No source supplies migration duration.'",
+            "text": "Neither source establishes a migration duration for switching from Orion to Vega."
+          }
+        ],
+        "sourceReview": {
+          "version": 1,
+          "path": "/fixture/research/decision.md",
+          "draftRevision": "5757edf1101236e2e41d9949a72c55f148beab7d725c243e4bee625bfb46db47",
+          "taskRevision": 1,
+          "claims": [
+            {
+              "text": "The monthly budget ceiling is 120 credits.",
+              "kind": "source_statement",
+              "limits": "From requirements.md: 'The monthly budget ceiling is 120 credits.'",
+              "evidence": [
+                {
+                  "source": "/fixture/research/requirements.md",
+                  "evidence": "378f71c6-a306-4634-8713-280ba961d3a0",
+                  "revision": "dbfc4ce757771972874b67602a8330e88085848a334da7f497cfdb4b82ab22a2",
+                  "quote": "# requirements.md\n\nThe owner needs offline editing and portable Markdown export. The monthly budget ceiling is 120 credits.\n",
+                  "line": 1
+                }
+              ]
+            },
+            {
+              "text": "Orion costs 140 credits per month.",
+              "kind": "source_statement",
+              "limits": "From orion-quote.md: 'Orion costs 140 credits per month. Orion offers offline editing and Markdown export.'",
+              "evidence": [
+                {
+                  "source": "/fixture/research/orion-quote.md",
+                  "evidence": "9545668e-839d-4056-85b2-cbd4dd926842",
+                  "revision": "5d7ab3e81411648f07267b7a5234c187b34cb6d098104d565deb06187d77ecfd",
+                  "quote": "# orion-quote.md\n\nVendor quote for this trimester: Orion costs 140 credits per month. Orion offers offline editing and Markdown export.\n",
+                  "line": 1
+                }
+              ]
+            },
+            {
+              "text": "Orion costs 110 credits per month.",
+              "kind": "source_statement",
+              "limits": "From orion-catalog.md: 'Orion costs 110 credits per month. This conflicts with the quote. No source establishes which price is current.'",
+              "evidence": [
+                {
+                  "source": "/fixture/research/orion-catalog.md",
+                  "evidence": "64877d6e-efc7-475d-820e-fa0ca2c37d06",
+                  "revision": "04614a0bb18057260ada7f25e79b6759068cc3d0bc1cccb6a7da327207be52ee",
+                  "quote": "# orion-catalog.md\n\nVendor catalog for the same trimester: Orion costs 110 credits per month. This conflicts with the quote. No source establishes which price is current.\n",
+                  "line": 1
+                }
+              ]
+            },
+            {
+              "text": "Vega costs 90 credits per month.",
+              "kind": "source_statement",
+              "limits": "From vega-catalog.md: 'Vega costs 90 credits per month. Vega exports Markdown but requires an internet connection for editing.'",
+              "evidence": [
+                {
+                  "source": "/fixture/research/vega-catalog.md",
+                  "evidence": "db079afc-8862-4e3b-bf3a-1993e3c70e97",
+                  "revision": "e211d77c71f9d6246697c204bf844443820bb09bcaa1b7eff3eb72773196466a",
+                  "quote": "# vega-catalog.md\n\nVega costs 90 credits per month. Vega exports Markdown but requires an internet connection for editing. No source supplies migration duration.\n",
+                  "line": 1
+                }
+              ]
+            },
+            {
+              "text": "Orion's offline editing and portable Markdown export meet the requirements; Vega's internet requirement conflicts.",
+              "kind": "inference",
+              "limits": "Based on E1 (offline editing required) and E4 (Vega requires internet connection for editing).",
+              "evidence": [
+                {
+                  "source": "/fixture/research/requirements.md",
+                  "evidence": "378f71c6-a306-4634-8713-280ba961d3a0",
+                  "revision": "dbfc4ce757771972874b67602a8330e88085848a334da7f497cfdb4b82ab22a2",
+                  "quote": "# requirements.md\n\nThe owner needs offline editing and portable Markdown export. The monthly budget ceiling is 120 credits.\n",
+                  "line": 1
+                },
+                {
+                  "source": "/fixture/research/vega-catalog.md",
+                  "evidence": "db079afc-8862-4e3b-bf3a-1993e3c70e97",
+                  "revision": "e211d77c71f9d6246697c204bf844443820bb09bcaa1b7eff3eb72773196466a",
+                  "quote": "# vega-catalog.md\n\nVega costs 90 credits per month. Vega exports Markdown but requires an internet connection for editing. No source supplies migration duration.\n",
+                  "line": 1
+                }
+              ]
+            },
+            {
+              "text": "Neither source establishes a migration duration for switching from Orion to Vega.",
+              "kind": "inference",
+              "limits": "E3 states 'No source establishes which price is current' and E4 notes 'No source supplies migration duration.'",
+              "evidence": [
+                {
+                  "source": "/fixture/research/orion-catalog.md",
+                  "evidence": "64877d6e-efc7-475d-820e-fa0ca2c37d06",
+                  "revision": "04614a0bb18057260ada7f25e79b6759068cc3d0bc1cccb6a7da327207be52ee",
+                  "quote": "# orion-catalog.md\n\nVendor catalog for the same trimester: Orion costs 110 credits per month. This conflicts with the quote. No source establishes which price is current.\n",
+                  "line": 1
+                },
+                {
+                  "source": "/fixture/research/vega-catalog.md",
+                  "evidence": "db079afc-8862-4e3b-bf3a-1993e3c70e97",
+                  "revision": "e211d77c71f9d6246697c204bf844443820bb09bcaa1b7eff3eb72773196466a",
+                  "quote": "# vega-catalog.md\n\nVega costs 90 credits per month. Vega exports Markdown but requires an internet connection for editing. No source supplies migration duration.\n",
+                  "line": 1
+                }
+              ]
+            }
+          ],
+          "sources": [
+            {
+              "path": "/fixture/research/requirements.md",
+              "evidence": "378f71c6-a306-4634-8713-280ba961d3a0",
+              "revision": "dbfc4ce757771972874b67602a8330e88085848a334da7f497cfdb4b82ab22a2"
+            },
+            {
+              "path": "/fixture/research/orion-quote.md",
+              "evidence": "9545668e-839d-4056-85b2-cbd4dd926842",
+              "revision": "5d7ab3e81411648f07267b7a5234c187b34cb6d098104d565deb06187d77ecfd"
+            },
+            {
+              "path": "/fixture/research/orion-catalog.md",
+              "evidence": "64877d6e-efc7-475d-820e-fa0ca2c37d06",
+              "revision": "04614a0bb18057260ada7f25e79b6759068cc3d0bc1cccb6a7da327207be52ee"
+            },
+            {
+              "path": "/fixture/research/vega-catalog.md",
+              "evidence": "db079afc-8862-4e3b-bf3a-1993e3c70e97",
+              "revision": "e211d77c71f9d6246697c204bf844443820bb09bcaa1b7eff3eb72773196466a"
+            }
+          ],
+          "notice": "Aurora’s assessment of the listed claims only. Exact excerpts and draft membership were checked; meaning, source truth, completeness, units and period compatibility still need judgment. Unknown is scoped to the listed sources. This is not a factual correctness certificate."
+        },
+        "contentSource": "generated draft with source claim review"
+      }
+    ]
+  },
+  "operation": "b35e78b7-c0dc-4d0c-be52-9618a589d12a"
+}

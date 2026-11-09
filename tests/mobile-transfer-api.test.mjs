@@ -1,0 +1,23 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtemp,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {createApp} from '../src/server.mjs';
+test('mobile HTTP transfer requires local review and never creates actions or workflows',async t=>{
+  const dir=await mkdtemp(join(tmpdir(),'aurora-mobile-api-'));
+  const app=await createApp({vault:join(dir,'vault'),data:join(dir,'data'),backups:join(dir,'backups'),projects:[],ollamaClient:{status:async()=>({online:false,models:[]})}});
+  await new Promise(r=>app.server.listen(0,'127.0.0.1',r));t.after(async()=>{app.server.closeAllConnections();await new Promise(r=>app.server.close(r));await rm(dir,{recursive:true,force:true});});
+  const base=`http://127.0.0.1:${app.server.address().port}`,token=(await(await fetch(base+'/api/bootstrap')).json()).token;
+  const post=(path,data,headers={})=>fetch(base+path,{method:'POST',headers:{'Content-Type':'application/json',...headers},body:JSON.stringify(data)}),auth={'X-Aster-Token':token};
+  for(const path of ['/api/mobile-transfer-export','/api/mobile-transfer-preview','/api/mobile-transfer-decide'])assert.equal((await post(path,{})).status,403);
+  assert.equal((await post('/api/mobile-transfer-export',{paths:['10 Profile/About me.md']},{...auth,Origin:'https://evil.invalid'})).status,403);
+  const exported=await(await post('/api/mobile-transfer-export',{paths:['10 Profile/About me.md']},auth)).json();assert.equal(exported.bundle.notes.length,1);assert(exported.bundle.notes[0].desktop.exportId);
+  const raw=JSON.stringify({format:'aurora-mobile-v1',notes:Array.from({length:7},(_,i)=>({path:`N${i}.md`,content:'x'.repeat(100000)})),requests:[{id:'fixture-request',target:'laptop',status:'queued',text:'Open an app',answer:'',created:''}]});
+  const response=await post('/api/mobile-transfer-preview',{raw},auth);assert.equal(response.status,200);const plan=await response.json();assert.equal(plan.rows.length,8);
+  assert.equal((await post('/api/mobile-transfer-decide',{id:plan.id,rowId:plan.rows[0].id,choice:'save',digest:'bad'},auth)).status,409);
+  const saved=await post('/api/mobile-transfer-decide',{id:plan.id,rowId:plan.rows.at(-1).id,choice:'save',digest:plan.digest},auth);assert.equal(saved.status,200);
+  assert.equal((await app.vault.read(plan.rows.at(-1).path)).status,'draft');assert.deepEqual(await app.store.list('actions'),[]);assert.deepEqual(await app.store.list('workflows'),[]);
+  assert.equal((await fetch(base+'/api/mobile-transfers')).status,200);assert.equal((await fetch(base+'/api/mobile-transfer?id='+plan.id)).status,200);assert.equal((await fetch(base+'/mobile-transfers.js')).status,200);
+  assert.equal((await post('/api/mobile-transfer-preview',{raw:'null'},auth)).status,400);
+});

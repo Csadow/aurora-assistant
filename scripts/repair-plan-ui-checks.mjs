@@ -1,0 +1,41 @@
+import assert from 'node:assert/strict';
+import {writeFile,readFile,rm} from 'node:fs/promises';
+import {join} from 'node:path';
+export async function repairPlanUIChecks({evaluate,wait,backend,directory,check}){
+ const path=join(directory,'repair-list.txt'),notePath='20 Projects/Repair list UI fixture.md',prior=backend.assistant.ollama.chat;let id,projectId,n=0,releaseFeedback,feedbackReady=false,releaseExpression,expressionReady=false;
+ const before='const width=Math.max(a,b); // <span data-fake-repair>\n',after=before.replace('Math.max','Math.min');await writeFile(path,before);
+ const call=(name,args)=>({tool_calls:[{function:{name,arguments:args}}]});
+ backend.assistant.ollama.chat=async m=>{
+  const c=JSON.parse(m.at(-1).content);
+  if(++n===1)return call('read_system_file',{path});
+  if(n===2)return call('record_repair_plan',{repairs:[{file:path,line:1,before:'Math.max(a,b)',after:'Math.min(a,b)',reason:'Keep the valid candidate.'},{file:path,line:1,before:'Math.max(a,b)',after:'Math.min(a,b)\nnext statement',reason:'Reject multiline.'}]});
+  if(n===3){feedbackReady=true;await new Promise(resolve=>releaseFeedback=resolve);return call('record_repair_plan',{repairs:[{file:path,line:1,before:'Math.max(a,b)',after:'Math.min(a,b)',reason:'Fixture <span data-fake-repair> reason.'}]});}
+  if(n===4)return call('check_repair_expression',{repair:c.repairPlan.repairs[0].id,cases:[{inputs:{a:700,b:1280},expected:{width:700}}]});
+  if(n===5){expressionReady=true;await new Promise(resolve=>releaseExpression=resolve);return call('check_repair_expression',{repair:c.repairPlan.repairs[0].id,cases:[{inputs:{a:700,b:1280},expected:700},{inputs:{a:460,b:320},expected:320}]});}
+  return call('propose_repair',{repair:c.repairPlan.repairs[0].id});
+ };
+ try{
+  await writeFile(join(backend.vault.root,notePath),'# Repair list UI fixture\n',{flag:'wx'});
+  const p=await backend.projectWorkspaces.save({name:'Repair list fixture',notePath,folders:[directory],checks:[{name:'Check',program:'node',args:['--version'],cwd:directory,outputIncludes:'v'}]});projectId=p.id;
+  const w=await backend.workflows.start({goal:'Repair list UI fixture',projectId:p.id,projectRevision:p.revision,projectCheckNames:['Check'],requirements:{files:[{path,lineEndings:'lf',finalNewline:'required'}],commands:[]}});id=w.id;
+  await wait(async()=>{const x=await backend.workflows.read(id);return x.status==='plan_review'&&!backend.workflows.running.has(id);},'repair list plan');await backend.workflows.control(id,'approve_plan','',w.revision);
+  await wait(()=>feedbackReady,'repair feedback ready');
+  await evaluate('document.querySelector("[data-view=chat]").click();document.querySelector("[data-view=workflows]").click()');await wait(()=>evaluate(`!!document.querySelector('[data-workflow-open="${id}"]')`),'repair feedback task');await evaluate(`document.querySelector('[data-workflow-open="${id}"]').click()`);await wait(()=>evaluate('!!document.querySelector("[data-repair-feedback]")'),'repair feedback panel');
+  assert(await evaluate('(()=>{const p=document.querySelector("[data-repair-feedback]");return p.textContent.includes("Item 2 · after")&&p.textContent.includes("contains a line break")&&p.textContent.includes("Source-matched items: 1")&&p.textContent.includes("Current observed line 1")&&p.textContent.includes("<span data-fake-repair>")&&!p.querySelector("[data-fake-repair]")})()'));assert.equal((await backend.store.list('actions')).filter(a=>a.workflow?.id===id).length,0);check('repair feedback identifies the failing field and escapes observed source without saving a partial list or action');
+  releaseFeedback();
+  await wait(()=>expressionReady,'expression feedback ready');
+  await evaluate('document.querySelector("[data-view=chat]").click();document.querySelector("[data-view=workflows]").click()');await wait(()=>evaluate(`!!document.querySelector('[data-workflow-open="${id}"]')`),'expression feedback task');await evaluate(`document.querySelector('[data-workflow-open="${id}"]').click()`);await wait(()=>evaluate('!!document.querySelector("[data-expression-feedback]")'),'expression feedback panel');
+  assert(await evaluate('(()=>{const p=document.querySelector("[data-expression-feedback]");return p.textContent.includes("cases[0].expected")&&p.textContent.includes("Required scalar inputs: a, b")&&p.textContent.includes("Current observed line 1")&&p.textContent.includes("<span data-fake-repair>")&&!p.querySelector("[data-fake-repair]")})()'));assert.equal((await backend.store.list('actions')).filter(a=>a.workflow?.id===id).length,0);check('expression feedback names the invalid field and required inputs, escapes observed source and records no verdict or action');
+  assert(await evaluate('(()=>{const p=document.querySelector("[data-expression-binding]");return p&&p.textContent.includes("Calculation linked to saved repair")&&p.textContent.includes("Math.max(a,b) → Math.min(a,b)")&&p.textContent.includes("Required scalar inputs: a, b")&&p.textContent.includes("does not prove")})()'));check('calculation binding shows the exact saved expression and scalar names before any verdict or action');
+  releaseExpression();
+  await wait(async()=>{const x=await backend.workflows.read(id);return x.status==='waiting_approval'&&!backend.workflows.running.has(id);},'repair list action');
+  await evaluate('document.querySelector("[data-view=chat]").click();document.querySelector("[data-view=workflows]").click()');await wait(()=>evaluate(`!!document.querySelector('[data-workflow-open="${id}"]')`),'repair list task');await evaluate(`document.querySelector('[data-workflow-open="${id}"]').click()`);await wait(()=>evaluate('document.querySelector("[data-repair-plan]")?.textContent.includes("awaiting action")&&document.querySelector("[data-expression-check]")?.textContent.includes("2/2 match")'),'corrected expression and pending action');
+  assert.equal(await evaluate('!!document.querySelector("[data-expression-feedback]")'),false);
+  await wait(()=>evaluate('(()=>{const p=document.querySelector("[data-project-progress]");return p&&p.textContent.includes("Waiting for action review")&&p.textContent.includes("Fresh check needed")&&p.textContent.includes("Exact action approvals still apply")})()'),'pending repair progress rendered');check('project progress separates pending approval from fresh checks and final readbacks');
+  assert(await evaluate('(()=>{const t=document.querySelector("[data-repair-plan]").textContent;return t.includes("awaiting action")&&t.includes("Math.max(a,b) → Math.min(a,b)")&&t.includes("does not establish coverage")})()'));check('repair list shows pending corrections separately from verified completion');
+  assert(await evaluate('document.querySelector("[data-repair-plan]").textContent.includes("<span data-fake-repair>")'));assert.equal(await evaluate('!!document.querySelector("[data-repair-plan] [data-fake-repair]")'),false);check('repair reasons are escaped in the task review');
+  assert(await evaluate('(()=>{const t=document.querySelector("[data-expression-check]").textContent;return t.includes("2/2 match")&&t.includes("Expected: 700")&&t.includes("Before: 1280")&&t.includes("Proposed: 700")&&t.includes("Model-supplied examples only")&&t.includes("Historical calculation")})()'));check('expression panel shows inputs, expected and computed values with coverage limits and historical source status');
+  const saved=await backend.workflows.read(id),a=await backend.store.get('actions',saved.operations.at(-1).action);assert.equal(await readFile(path,'utf8'),before);assert.equal(a.payload.content,after);
+  await evaluate(`document.querySelector('[data-workflow-action="${a.id}"]').click()`);await wait(()=>evaluate('document.querySelector("#action-review-dialog").open'),'repair exact action');assert(await evaluate('document.querySelector("#action-review-content").textContent.includes("Math.min")'));check('saved repair opens a separate exact write approval without changing the file');await evaluate('document.querySelector("#action-review-close").click()');
+ }finally{releaseFeedback?.();releaseExpression?.();if(id)await backend.workflows.control(id,'cancel').catch(()=>{});backend.assistant.ollama.chat=prior;if(projectId)await rm(backend.store.file('project-workspaces',projectId));await rm(join(backend.vault.root,notePath),{force:true});}
+}

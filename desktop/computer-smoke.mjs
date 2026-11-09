@@ -1,0 +1,96 @@
+import assert from 'node:assert/strict';
+import http from 'node:http';
+import {writeFile,readFile,mkdir,mkdtemp,rm} from 'node:fs/promises';
+import {join} from 'node:path';
+import {tmpdir} from 'node:os';
+import {spawn,execFile} from 'node:child_process';
+import {promisify} from 'node:util';
+const run=promisify(execFile);
+export async function smoke({win,backend,desktopComputer,computerLink}){
+ const report={ok:false,date:new Date().toISOString(),checks:[]},wait=async(fn,label)=>{const end=Date.now()+20000;while(Date.now()<end){if(await fn())return;await new Promise(r=>setTimeout(r,80));}throw new Error('Timeout: '+label);};
+ const fixture=http.createServer((req,res)=>{if(req.url==='/redirect'){res.writeHead(302,{Location:'/final'});res.end();return;}res.setHeader('Content-Type','text/html');res.end(`<!doctype html><title>Aurora control fixture ${fixture.address().port}</title><style>body{font:20px sans-serif;padding:40px;background:#f5f5f5}input,button{font:inherit;padding:12px;margin:10px}section{margin-top:1200px}</style><h1>Computer control fixture</h1><p>Public research marker: cobalt river.</p><input id="field" aria-label="Test message"><input id="secret" type="password" value="test-secret"><button id="action" onclick="document.querySelector('#result').textContent='Clicked once'">Test action</button><p id="result">Waiting</p><a href="/next">Next page</a><section>Bottom marker</section>`);});
+ await new Promise(r=>fixture.listen(0,'127.0.0.1',r));const url='http://127.0.0.1:'+fixture.address().port;desktopComputer.browser.testOrigin=url;
+ const dir=await mkdtemp(join(tmpdir(),'aurora-input-fixture-'));let chromium,socket;const pending=new Map();let sequence=0;
+ const command=(method,params={})=>new Promise((resolve,reject)=>{const id=++sequence,timer=setTimeout(()=>{pending.delete(id);reject(new Error('CDP timeout '+method));},6000);pending.set(id,{resolve,reject,timer});socket.send(JSON.stringify({id,method,params}));});
+ const evaluate=async expression=>{const r=await command('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(r.exceptionDetails)throw new Error(r.exceptionDetails.text);return r.result.value;};
+ const request=input=>backend.actions.computerAction({...input,reason:'Isolated computer-control test'},null);
+ const approved=async input=>{const staged=await request(input);assert.equal(staged.status,'pending');const a=await backend.store.get('actions',staged.id);await backend.actions.decide(a.id,'approve',a.digest);await wait(()=>!backend.actions.running.has(a.id),'approved '+input.operation);const done=await backend.store.get('actions',a.id);assert.equal(done.status,'completed',JSON.stringify(done.result));return done;};
+ try{
+  await wait(()=>win.webContents.executeJavaScript('document.body.dataset.ready==="true"'),'workspace ready');assert(backend.computer.status().online);
+  const opened=await request({operation:'open_url',url});assert.equal(opened.status,'completed',JSON.stringify(opened));const browser=desktopComputer.browser,page=browser.page;
+  assert.equal(await page.executeJavaScript('typeof require'),'undefined');assert.equal(await page.executeJavaScript('typeof window.asterDesktop'),'undefined');assert.equal(await page.executeJavaScript('fetch("aster://app/api/bootstrap").then(()=>true,()=>false)'),false);
+  assert.equal(await page.executeJavaScript(`fetch('http://127.0.0.1:${backend.server.address().port}/api/bootstrap').then(()=>true,()=>false)`),false);
+  let snapshot=opened.result;assert(snapshot.text.includes('cobalt river'));assert(browser.view.getBounds().height>200);const further=(await request({operation:'browser_read',offset:10})).result;assert.equal(further.offset,10);snapshot=(await request({operation:'browser_read'})).result;assert(!JSON.stringify(snapshot).includes('test-secret'));assert(!snapshot.elements.some(e=>e.type==='password'));report.checks.push('dedicated browser opens and reads real page content without credentials, Node, desktop bridge, or local-service access');
+  let field=snapshot.elements.find(e=>e.label==='Test message');const staged=await request({operation:'browser_fill',ref:field.ref,revision:snapshot.revision,text:'Reviewed browser text'});assert.equal(staged.status,'pending');assert.equal(await page.executeJavaScript('document.querySelector("#field").value'),'');
+  const countBeforePicker=(await backend.store.list('actions')).length;
+  const currentPage=await backend.outcomePicker.preview({kind:'browser'});
+  assert.deepEqual(currentPage.targets,[{key:'page',url:page.getURL(),title:page.getTitle()}]);
+  const pickedPage=await backend.outcomePicker.select({id:currentPage.id,target:'page',includeTitle:true});
+  assert.deepEqual(pickedPage.requirement,{url:page.getURL(),title:page.getTitle()});assert.equal((await backend.store.list('actions')).length,countBeforePicker);
+  report.checks.push('native page picker reads only labels, creates no action and leaves the pending browser review valid');
+  const fill=await backend.store.get('actions',staged.id);await backend.actions.decide(fill.id,'approve',fill.digest);await wait(()=>!backend.actions.running.has(fill.id),'browser fill');assert.equal((await backend.store.get('actions',fill.id)).status,'completed');assert.equal(await page.executeJavaScript('document.querySelector("#field").value'),'Reviewed browser text');
+  snapshot=(await request({operation:'browser_read'})).result;const button=snapshot.elements.find(e=>e.label==='Test action');await approved({operation:'browser_click',ref:button.ref,revision:snapshot.revision});assert.equal(await page.executeJavaScript('document.querySelector("#result").textContent'),'Clicked once');report.checks.push('browser typing and clicking have no effect until their exact actions are approved');
+  snapshot=(await request({operation:'browser_read'})).result;const stale=await request({operation:'browser_click',ref:snapshot.elements.find(e=>e.label==='Test action').ref,revision:snapshot.revision});await page.executeJavaScript('document.querySelector("#action").textContent="Changed action"');const a=await backend.store.get('actions',stale.id);await backend.actions.decide(a.id,'approve',a.digest);await wait(()=>!backend.actions.running.has(a.id),'stale action');assert.equal((await backend.store.get('actions',a.id)).status,'failed');report.checks.push('a changed browser control invalidates its reviewed action');
+  snapshot=(await request({operation:'browser_read'})).result;
+  const changedPage=await request({operation:'browser_click',ref:snapshot.elements.find(e=>e.label==='Changed action').ref,revision:snapshot.revision});
+  await page.executeJavaScript('document.querySelector("h1").textContent="Different page context"');
+  const oldPage=await backend.store.get('actions',changedPage.id);await backend.actions.decide(oldPage.id,'approve',oldPage.digest);await wait(()=>!backend.actions.running.has(oldPage.id),'changed page');
+  assert.equal((await backend.store.get('actions',oldPage.id)).status,'failed');assert.equal(await page.executeJavaScript('document.querySelector("#result").textContent'),'Clicked once');
+  report.checks.push('changed surrounding page text invalidates approval even when the target button is unchanged');
+  snapshot=(await request({operation:'browser_read'})).result;field=snapshot.elements.find(e=>e.label==='Test message');
+  const staleField=await request({operation:'browser_fill',ref:field.ref,revision:snapshot.revision,text:'Must not overwrite user edit'});
+  await page.executeJavaScript('document.querySelector("#field").value="Local unsaved input"');
+  const oldField=await backend.store.get('actions',staleField.id);await backend.actions.decide(oldField.id,'approve',oldField.digest);await wait(()=>!backend.actions.running.has(oldField.id),'changed input');
+  assert.equal((await backend.store.get('actions',oldField.id)).status,'failed');assert.equal(await page.executeJavaScript('document.querySelector("#field").value'),'Local unsaved input');
+  snapshot=(await request({operation:'browser_read'})).result;assert(!JSON.stringify(snapshot).includes('Local unsaved input'));assert(!JSON.stringify(oldField.payload).includes('Local unsaved input'));
+  await page.executeJavaScript('document.querySelector("h1").textContent="Changed again"');
+  await assert.rejects(request({operation:'browser_click',ref:snapshot.elements.find(e=>e.label==='Changed action').ref,revision:snapshot.revision}),/page or controls changed/);
+  report.checks.push('changed input is preserved and stale preparation is rejected without exposing field values');
+
+  const titlePreview=await backend.outcomePicker.preview({kind:'browser'});
+  await page.executeJavaScript('document.title += " changed"');await assert.rejects(backend.outcomePicker.select({id:titlePreview.id,target:'page',includeTitle:true}),/changed/);
+  const dynamicPreview=await backend.outcomePicker.preview({kind:'browser'});await page.executeJavaScript('document.title += " clock tick"');assert.deepEqual((await backend.outcomePicker.select({id:dynamicPreview.id,target:'page',includeTitle:false})).requirement,{url:page.getURL()});
+  report.checks.push('excluding a dynamic title permits title-only changes while copying the same observed page URL');
+  await request({operation:'open_url',url:url+'/redirect'});const redirected=await backend.outcomePicker.preview({kind:'browser'});assert.equal(redirected.targets[0].url,url+'/final');
+  await new Promise(resolve=>{page.once('did-finish-load',resolve);page.reload();});await assert.rejects(backend.outcomePicker.select({id:redirected.id,target:'page'}),/changed/);
+  const refreshed=await backend.outcomePicker.preview({kind:'browser'});assert.deepEqual((await backend.outcomePicker.select({id:refreshed.id,target:'page'})).requirement,{url:url+'/final'});
+  report.checks.push('native picker exposes the final redirected URL and rejects title changes and same-URL reloads until refreshed');
+
+  browser.window.show();browser.window.focus();await new Promise(r=>setTimeout(r,500));
+  const clients=JSON.parse((await run('hyprctl',['clients','-j'])).stdout),browserClient=clients.find(c=>c.pid===process.pid&&c.title.startsWith('Aurora Browser ·'));assert(browserClient);
+  const {stdout:visible}=await run('grim',['-g',`${browserClient.at[0]},${browserClient.at[1]} ${browserClient.size[0]}x${browserClient.size[1]}`,'-'],{encoding:'buffer',maxBuffer:10000000});
+  const {nativeImage}=await import('electron'),pixels=nativeImage.createFromBuffer(visible).toBitmap();let light=0;for(let i=0;i<pixels.length;i+=4)if(pixels[i]>230&&pixels[i+1]>230&&pixels[i+2]>230)light++;assert(light>pixels.length/4*.3,'Browser web content must be visible on the actual desktop');
+  await writeFile(process.env.AURORA_TEST_REPORT+'.png',visible);
+  // Exercise launching with a disposable user launcher, never an existing user app.
+  const originalHome=desktopComputer.home;desktopComputer.home=dir;await mkdir(join(dir,'.local/share/applications'),{recursive:true});
+  await writeFile(join(dir,'.local/share/applications/aurora-fixture.desktop'),`[Desktop Entry]\nType=Application\nName=Aurora fixture launcher\nExec=/usr/bin/touch ${join(dir,'launched')}\n`);
+  const apps=(await request({operation:'applications'})).result;assert(apps.applications.some(a=>a.id==='aurora-fixture.desktop'));assert.equal((await request({operation:'open_app',application:'aurora-fixture.desktop'})).status,'completed');await wait(async()=>{try{await readFile(join(dir,'launched'));return true;}catch{return false;}},'launcher result');desktopComputer.home=originalHome;report.checks.push('installed application discovery and launching use a real desktop entry');
+  // Raw input only touches this external, disposable Chromium window.
+  chromium=spawn('/usr/bin/chromium',['--no-first-run','--no-default-browser-check','--ozone-platform=wayland','--class=aurora-control-fixture',`--user-data-dir=${dir}/chromium`,'--remote-debugging-port=0','--remote-allow-origins=*','--app='+url],{stdio:['ignore','ignore','pipe']});let chromeLog='';chromium.stderr.on('data',d=>chromeLog+=d);
+  let port;await wait(async()=>{try{port=(await readFile(join(dir,'chromium/DevToolsActivePort'),'utf8')).split('\n')[0];return true;}catch{return false;}},'external Chromium fixture');let targetPage;await wait(async()=>{targetPage=(await(await fetch('http://127.0.0.1:'+port+'/json/list')).json()).find(t=>t.type==='page'&&t.url.startsWith(url));return !!targetPage;},'fixture page target');
+  socket=new WebSocket(targetPage.webSocketDebuggerUrl);await new Promise((r,j)=>{socket.onopen=r;socket.onerror=j;});socket.onmessage=e=>{const v=JSON.parse(e.data),job=pending.get(v.id);if(job){pending.delete(v.id);clearTimeout(job.timer);v.error?job.reject(new Error(v.error.message)):job.resolve(v.result);}};
+  await wait(()=>evaluate('document.readyState==="complete"'),'fixture document');
+  let target;await wait(async()=>{const result=(await request({operation:'windows'})).result;target=result.windows.find(w=>w.title==='Aurora control fixture '+fixture.address().port);return !!target;},'external window discovery');assert(target);
+  const windowCountBefore=(await backend.store.list('actions')).length,windowPreview=await backend.outcomePicker.preview({kind:'window'});
+  const picked=windowPreview.targets.find(w=>w.key===target.id);assert(picked);assert.equal(picked.title,target.title);
+  await evaluate('document.title="Changed picker fixture"');await wait(async()=>(await desktopComputer.clients()).some(c=>c.address===target.id&&c.title==='Changed picker fixture'),'renamed fixture');
+  await assert.rejects(backend.outcomePicker.select({id:windowPreview.id,target:target.id,includeApp:true}),/changed/);
+  await evaluate('document.title='+JSON.stringify(target.title));await wait(async()=>(await desktopComputer.clients()).some(c=>c.address===target.id&&c.title===target.title),'restored fixture');
+  const freshWindow=await backend.outcomePicker.preview({kind:'window'});assert.deepEqual((await backend.outcomePicker.select({id:freshWindow.id,target:target.id,includeApp:true})).requirement,{title:target.title,app:target.app});
+  assert.equal((await backend.store.list('actions')).length,windowCountBefore);report.checks.push('native window picker rejects renamed documents and copies the refreshed exact title/app without actions');
+  await request({operation:'focus_window',windowId:target.id});await evaluate('document.querySelector("#field").focus();true');
+  await approved({operation:'type_text',windowId:target.id,text:'Native input works'});assert.equal(await evaluate('document.querySelector("#field").value'),'Native input works');
+  await approved({operation:'key',windowId:target.id,key:'Ctrl+a'});await approved({operation:'type_text',windowId:target.id,text:'Aurora ✓'});assert.equal(await evaluate('document.querySelector("#field").value'),'Aurora ✓');report.checks.push('Hyprland focus, reviewed Unicode typing, and reviewed keyboard shortcuts control an external app');
+  target=(await request({operation:'windows'})).result.windows.find(w=>w.id===target.id);const point=await evaluate('(()=>{const r=document.querySelector("#action").getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2,innerHeight,innerWidth}})()');
+  await approved({operation:'click',windowId:target.id,x:Math.round(point.x+(target.width-point.innerWidth)/2),y:Math.round(point.y+target.height-point.innerHeight)});await wait(()=>evaluate('document.querySelector("#result").textContent==="Clicked once"'),'native click result');report.checks.push('reviewed mouse click reaches the selected external window at relative coordinates');
+  await computerLink.pause();assert.equal(backend.settings.value.computerEnabled,false);await assert.rejects(request({operation:'windows'}),/paused/);await backend.settings.save({systemEnabled:true,computerEnabled:true});await approved({operation:'close_window',windowId:target.id});report.checks.push('emergency pause blocks subsequent controls; reviewed close targets only the selected app');
+  await win.webContents.executeJavaScript('document.querySelector("#settings").click()');await wait(()=>win.webContents.executeJavaScript('!!document.querySelector("#computer-enabled")'),'computer Settings');assert.equal(await win.webContents.executeJavaScript('document.querySelector("#computer-enabled").checked'),true);report.checks.push('computer permissions and connection status are available in Settings');
+  const conversation=await backend.store.conversation();await win.webContents.executeJavaScript('window.asterDesktop.quick("open")');
+  const {BrowserWindow}=await import('electron'),quick=BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().endsWith('/quick.html'));
+  await quick.webContents.executeJavaScript('window.asterDesktop.screen("configure",{persistent:true,resumeOnStart:false}).then(()=>window.asterDesktop.screen("desktop"))');
+  const observation=await backend.assistant.runTool({function:{name:'inspect_desktop',arguments:{question:'Describe this fixture screen'}}},conversation.id,new AbortController().signal);assert(observation.content.includes('Screen fixture recognized'));assert(!('image' in observation));
+  await win.webContents.executeJavaScript('window.asterDesktop.screen("stop")');await assert.rejects(backend.assistant.runTool({function:{name:'inspect_desktop',arguments:{question:'Inspect after stop'}}},conversation.id,new AbortController().signal),/Screen access is off/);
+  report.checks.push('chat screen inspection uses existing permission, strips the transient image, and fails after sharing is stopped');
+  report.ok=true;await writeFile(process.env.AURORA_TEST_REPORT,JSON.stringify(report,null,2));
+ }finally{console.log('Completed native computer checks:',JSON.stringify(report.checks));socket?.close();for(const job of pending.values())clearTimeout(job.timer);chromium?.kill('SIGTERM');await new Promise(r=>setTimeout(r,400));await new Promise(r=>fixture.close(r));await rm(dir,{recursive:true,force:true});}
+}

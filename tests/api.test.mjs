@@ -1,0 +1,47 @@
+import {readFile} from 'node:fs/promises';
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { createApp } from '../src/server.mjs';
+import http from 'node:http';
+
+test('HTTP workflow and local-origin protections',async t=>{
+  const dir=await mkdtemp(join(tmpdir(),'aster-api-'));
+  const app=await createApp({vault:join(dir,'vault'),data:join(dir,'data'),projects:[],backups:join(dir,'backups'),ollamaClient:{status:async()=>({online:false,models:[]})}});
+  await new Promise(r=>app.server.listen(0,'127.0.0.1',r));
+  t.after(async()=>{app.server.closeAllConnections();await new Promise(r=>app.server.close(r));await rm(dir,{recursive:true,force:true});});
+  const base=`http://127.0.0.1:${app.server.address().port}`;
+  const request=(path,data,headers={})=>fetch(base+path,{method:data?'POST':'GET',headers:{...(data?{'Content-Type':'application/json'}:{}),...headers},body:data?JSON.stringify(data):undefined});
+  const boot=await(await request('/api/bootstrap')).json();assert(boot.token);assert.equal(boot.version,JSON.parse(await readFile(new URL('../package.json',import.meta.url),'utf8')).version);
+  assert.equal((await request('/api/remember',{text:'Unauthorized'})).status,403);
+  assert.equal((await request('/api/bootstrap',null,{'Origin':'https://evil.test'})).status,403);
+  const badHost=await new Promise((resolve,reject)=>{const req=http.get(base+'/api/bootstrap',{headers:{Host:'evil.test'}},res=>{res.resume();resolve(res.statusCode);});req.on('error',reject);});
+  assert.equal(badHost,403);
+  assert.equal((await request('/api/bootstrap',null,{'Sec-Fetch-Site':'cross-site'})).status,403);
+  const headers={'X-Aster-Token':boot.token};
+  assert.equal((await request('/api/settings',{systemEnabled:false})).status,403);
+  assert.equal((await request('/api/action-propose',{kind:'command',input:{program:'printf',args:['safe']}})).status,403);
+  assert.equal((await request('/api/action-decide',{id:'bad',decision:'approve'}, {...headers,Origin:'https://evil.test'})).status,403);
+  const permissions=await(await request('/api/settings')).json();assert.equal(permissions.cloud.enabled,false);assert(!JSON.stringify(permissions).includes('apiKey'));
+  const saved=await(await request('/api/remember',{text:'The constellation is Lantern Finch 853.'},headers)).json();assert(saved.path);
+  const search=await(await request('/api/search?q=constellation')).json();assert(search.some(n=>n.excerpt.includes('Lantern Finch 853')));
+  const c=await(await request('/api/conversations',{},headers)).json();
+  const chat=await request('/api/chat',{id:c.id,message:'/task Check the constellation'},headers);assert.equal(chat.status,200);assert.match(await chat.text(),/"type":"done"/);
+  const tasks=await(await request('/api/tasks')).json();assert.equal(tasks[0].text,'Check the constellation');
+  const page=await request('/');assert.match(page.headers.get('content-security-policy'),/frame-ancestors 'none'/);assert.match(await page.text(),/Personal workspace/);
+  assert.equal((await request('/api/note?path=..%2Fsecret.md')).status,400);
+  assert.equal((await request('/api/backup',{})).status,403);
+  const health=await(await request('/api/health')).json();assert(health.checks.some(c=>c.name==='Local model'&&c.status==='error'));assert(!JSON.stringify(health).includes('apiKey'));
+  const archive=await(await request('/api/backup',{},headers)).json();assert(archive.path.startsWith(join(dir,'backups')));assert.equal((await(await request('/api/backups')).json()).length,1);
+  for(const data of ['null','[]','true'])assert.equal((await fetch(base+'/api/remember',{method:'POST',headers:{...headers,'Content-Type':'application/json'},body:data})).status,400);
+  for(const path of ['/api/workflow-start','/api/workflow-control','/api/recovery-bundle','/api/task-schedule','/api/reminders/poll','/api/reminders/ack','/api/memory-review/keep','/api/memory-review/analyze'])assert.equal((await request(path,{})).status,403);
+  const day=await(await request('/api/overview')).json();assert.equal(day.timezone,'Asia/Atyrau');assert.equal(day.counts.open,1);
+  const task=(await(await request('/api/tasks')).json())[0];assert.equal((await request('/api/task-schedule',{...task,due:'2030-10-01',remindAt:'2030-10-01T09:00:00+05:00'},headers)).status,200);
+  assert.equal((await(await request('/api/reminders/poll',{},headers)).json()).delivery,null);assert.equal((await request('/api/reminders/ack',{id:'unissued'},headers)).status,409);
+  assert(Array.isArray((await(await request('/api/memory-review')).json()).findings));assert.equal((await request('/api/memory-review/analyze',{paths:[]},headers)).status,400);
+  const text='Привет, қазақша 🌟',payload=Buffer.from(JSON.stringify({text})),split=payload.indexOf(Buffer.from('П'))+1;
+  const unicode=await new Promise((resolve,reject)=>{const req=http.request(base+'/api/remember',{method:'POST',headers:{...headers,'Content-Type':'application/json'}},res=>{let body='';res.on('data',d=>body+=d);res.on('end',()=>resolve(JSON.parse(body)));});req.on('error',reject);req.write(payload.subarray(0,split));setTimeout(()=>req.end(payload.subarray(split)),20);});assert(unicode.content.includes(text));
+
+});

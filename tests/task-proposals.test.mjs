@@ -1,0 +1,44 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtemp,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {Vault} from '../src/vault.mjs';
+import {taskLine} from '../src/task-meta.mjs';
+import {Store} from '../src/store.mjs';
+import {TaskProposals} from '../src/task-proposals.mjs';
+import {emptyTimetable,timetableMarkdown,TIMETABLE_PATH} from '../mobile/web/timetable.js';
+import {taskProposalReview} from '../public/task-proposal-review.js';
+async function setup(t){const dir=await mkdtemp(join(tmpdir(),'aurora-reviews-'));t.after(()=>rm(dir,{recursive:true,force:true}));const vault=new Vault(join(dir,'vault')),store=new Store(join(dir,'data'));await vault.init();await store.init();return {vault,store,reviews:new TaskProposals({vault,store})};}
+const timed={text:'Study',planDate:'2026-10-12',startTime:'12:00',duration:45,priority:'high',due:'2026-10-15',remindAt:'2026-10-12T06:00:00Z'};
+async function update(f,changes){const t=(await f.vault.tasks())[0];return f.reviews.propose({...t,changes},null,{update:true});}
+test('review is inert until accepted, saves all fields once even with concurrent retries',async t=>{const f=await setup(t),p=await f.reviews.propose(timed);assert.equal((await f.vault.tasks()).length,0);await Promise.all([f.reviews.decide(p.id,'accept'),f.reviews.decide(p.id,'accept')]);const tasks=await f.vault.tasks();assert.equal(tasks.length,1);for(const [k,v]of Object.entries(timed))assert.equal(tasks[0][k],k==='remindAt'?new Date(v).toISOString():v);});
+test('update preserves deadline, reminder and stable ID; unrelated additions survive',async t=>{const f=await setup(t);await f.vault.addTask(timed.text,timed);const before=(await f.vault.tasks())[0],p=await update(f,{startTime:'13:00'});await f.vault.addTask('Other');await f.reviews.decide(p.id,'accept');const tasks=await f.vault.tasks(),after=tasks.find(t=>t.id===before.id);assert.equal(tasks.length,2);assert.equal(after.startTime,'13:00');assert.equal(after.due,before.due);assert.equal(after.remindAt,before.remindAt);});
+test('stale list revision rejected before creating proposal',async t=>{const f=await setup(t);await f.vault.addTask('Study');const task=(await f.vault.tasks())[0];await f.vault.addTask('Other');await assert.rejects(f.reviews.propose({...task,changes:{duration:60}},null,{update:true}),/changed/);assert.equal((await f.store.list('proposals')).length,0);});
+test('completed target cannot be changed by an old review',async t=>{const f=await setup(t);await f.vault.addTask('Study');const p=await update(f,{duration:60}),task=(await f.vault.tasks())[0];await f.vault.toggleTask(task.path,task.line,task.revision,true);await assert.rejects(f.reviews.decide(p.id,'accept'),/changed/);assert.equal((await f.vault.tasks())[0].duration,30);});
+test('overlaps require explicit boolean acknowledgement',async t=>{const f=await setup(t);await f.vault.addTask('Existing',timed);const p=await f.reviews.propose({...timed,text:'Second'});assert.equal(p.review.conflicts[0].kind,'task');for(const allowConflicts of [undefined,false,'true'])await assert.rejects(f.reviews.decide(p.id,'accept',{allowConflicts}),/overlaps/);await f.reviews.decide(p.id,'accept',{allowConflicts:true});assert.equal((await f.vault.tasks()).length,2);});
+test('class and commute overlaps are reviewed; timetable edits invalidate reviews',async t=>{const f=await setup(t),table={...emptyTimetable(),travelBefore:30,travelConfirmed:true,classes:[{id:'one',day:1,title:'Math',location:'Campus',start:'12:00',end:'12:50'}]};await f.vault.save(TIMETABLE_PATH,timetableMarkdown(table),null);const p=await f.reviews.propose({...timed,startTime:'11:45'});assert.deepEqual(p.review.conflicts.map(c=>c.kind),['class','travel']);const note=await f.vault.read(TIMETABLE_PATH);await f.vault.save(note.path,timetableMarkdown({...table,travelBefore:40}),note.revision);await assert.rejects(f.reviews.decide(p.id,'accept',{allowConflicts:true}),/schedule changed/);});
+test('a new conflicting task invalidates a previously conflict-free review',async t=>{const f=await setup(t),p=await f.reviews.propose(timed);await f.vault.addTask('New conflict',timed);await assert.rejects(f.reviews.decide(p.id,'accept'),/schedule changed/);assert.equal((await f.vault.tasks()).length,1);});
+test('dismiss is durable and makes no task changes',async t=>{const f=await setup(t),p=await f.reviews.propose(timed);await f.reviews.decide(p.id,'dismiss');assert.equal((await f.vault.tasks()).length,0);await assert.rejects(new TaskProposals(f).decide(p.id,'accept'),/already handled/);});
+test('interrupted status save reconciles after restart without duplicate; dismissal reports actual accepted state',async t=>{const f=await setup(t),p=await f.reviews.propose(timed),put=f.store.put.bind(f.store);let fail=true;f.store.put=async(k,r)=>{if(r.status==='accepted'&&fail){fail=false;throw Error('Injected disk failure');}return put(k,r);};await assert.rejects(f.reviews.decide(p.id,'accept'),/disk failure/);assert.equal((await f.vault.tasks()).length,1);const result=await new TaskProposals(f).decide(p.id,'dismiss');assert.equal(result.status,'accepted');assert.equal(result.intent,undefined);assert.equal((await f.vault.tasks()).length,1);});
+test('interrupted write cannot overwrite later user changes on retry',async t=>{const f=await setup(t),p=await f.reviews.propose(timed),save=f.vault.save.bind(f.vault);f.vault.save=async()=>{throw Error('Injected write failure');};await assert.rejects(f.reviews.decide(p.id,'accept'),/write failure/);f.vault.save=save;await f.vault.addTask('User addition');await assert.rejects(f.reviews.decide(p.id,'accept'),/could not be reconciled/);assert.equal((await f.vault.tasks())[0].text,'User addition');});
+test('late schedule changes are caught immediately before vault commit',async t=>{const f=await setup(t),p=await f.reviews.propose(timed),save=f.vault.save.bind(f.vault);f.vault.save=async(path,content,revision,options)=>{await save('20 Projects/Conflict.md','- [ ] '+taskLine('Conflict',timed)+'\n',null);return save(path,content,revision,options);};await assert.rejects(f.reviews.decide(p.id,'accept'),/schedule changed/);assert.equal((await f.vault.tasks()).length,1);});
+test('review escapes user titles and provides overlap control',async t=>{const f=await setup(t);await f.vault.addTask('Existing',timed);const p=await f.reviews.propose({...timed,text:'<img src=x>'});const html=taskProposalReview(p,s=>String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'));assert(!html.includes('<img'));assert(html.includes('data-task-overlaps'));assert(html.includes('Before'));assert(html.includes('After'));});
+
+test('chat exposes task updates without system access and emits a review before any task write',async t=>{
+ const f=await setup(t);await f.vault.addTask('Study');let phase=0;
+ const {Assistant}=await import('../src/assistant.mjs');
+ const ollama={check:async()=>{},chat:async(messages,tools,signal,chunk)=>{
+  assert(tools.some(t=>t.function.name==='propose_task_update'));
+  if(phase++===0)return {role:'assistant',tool_calls:[{function:{name:'list_tasks',arguments:{}}}]};
+  if(phase===2){const task=JSON.parse(messages.findLast(m=>m.role==='tool').content)[0];return {role:'assistant',tool_calls:[{function:{name:'propose_task_update',arguments:{path:task.path,line:task.line,revision:task.revision,changes:{duration:60}}}}]};}
+  chunk('Review the pending task change.');return {role:'assistant',content:'Review the pending task change.'};
+ }};
+ const assistant=new Assistant({...f,ollama,projects:{items:[]}}),c=await f.store.conversation(),events=[];
+ await assistant.chat({id:c.id,message:'Make my Study task 60 minutes'},AbortSignal.timeout(10000),e=>events.push(e));
+ assert(events.some(e=>e.type==='proposal'&&e.proposal.kind==='task_update'));
+ assert.equal((await f.vault.tasks())[0].duration,30);
+});
+
+test('pending review survives restart and assigns a stable ID to a legacy checkbox',async t=>{const f=await setup(t),note=await f.vault.read('40 Tasks/Tasks.md');await f.vault.save(note.path,note.content+'\n- [ ] Legacy task\n',note.revision);const p=await update(f,{planDate:'2026-10-20',startTime:'14:00'});await new TaskProposals(f).decide(p.id,'accept');const task=(await f.vault.tasks())[0];assert.equal(task.text,'Legacy task');assert.equal(task.id,p.review.after.id);assert.equal(task.startTime,'14:00');});
+test('clearing a work block preserves its separately requested reminder and deadline',async t=>{const f=await setup(t);await f.vault.addTask(timed.text,timed);const p=await update(f,{planDate:null,startTime:null});await f.reviews.decide(p.id,'accept');const task=(await f.vault.tasks())[0];assert.equal(task.planDate,null);assert.equal(task.startTime,null);assert.equal(task.due,timed.due);assert.equal(task.remindAt,new Date(timed.remindAt).toISOString());});
