@@ -25,7 +25,7 @@ test('new nonproject workflows pause on an exact prose question without reading 
   const f=await fixture(t,()=>({role:'assistant',content:question}));
   const started=await f.workflows.start({goal:'Ask which file to read before selecting one.'});
   const w=await until(async()=>{const current=await get(f,started.id);return current.status==='waiting_input'&&!f.workflows.running.has(started.id)?current:false;},'prose question pause');
-  assert.equal(w.version,34);assert.equal(w.question,question);assert.equal(w.operations.length,1);
+  assert.equal(w.version,35);assert.equal(w.question,question);assert.equal(w.operations.length,1);
   assert.equal(w.operations[0].name,'ask_user');assert.equal(w.operations[0].questionSource,'model prose');
   assert.equal((await f.store.list('actions')).length,0);assert.equal(await readFile(f.path,'utf8'),'before');
   const answer='Use only the second file and do not ask again.',updated=await f.workflows.steer(w.id,answer,w.revision),context=JSON.parse(f.workflows.context(updated));

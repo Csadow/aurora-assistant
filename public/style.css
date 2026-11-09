@@ -185,3 +185,7 @@
   body[data-workspace-view]:not([data-workspace-view="chat"]) #menu{display:flex!important}
   body[data-workspace-view]:not([data-workspace-view="chat"]).menu-open #sidebar{display:flex;position:absolute;left:45px;top:35px;bottom:24px;width:230px;z-index:6;box-shadow:30px 0 60px #0007}
 }
+
+.day-task-group>summary,.day-context-group>summary,.day-task-groups>summary{cursor:pointer;font-size:17px;font-weight:600}.day-task-group>summary small{font-size:12px;font-weight:400;opacity:.6;margin-left:12px}.day-context-group[open]>summary{margin-bottom:14px}
+
+.day-task-groups[open]>summary{margin-bottom:12px}

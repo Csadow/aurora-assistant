@@ -37,3 +37,24 @@ for(const missing of [false,true])test(missing?'a remaining unsupported fact blo
  if(missing){assert.equal(actions.length,0);assert(op.result.requirementFailures);assert.equal(ready.status,'needs_help');return;}
  assert.equal(actions.length,1);const a=actions[0];assert(a.payload.content.startsWith('110 < 120\nKeep the uncertainty [source.md](source.md).'));await f.actions.decide(a.id,'approve',a.digest);await wait(async()=>(await f.workflows.read(w.id)).status==='completed');assert.equal(await readFile(path,'utf8'),a.payload.content);assert.equal(await readFile(source,'utf8'),quote);assert.equal(await readFile(limit,'utf8'),budget);
 });
+
+for(const existing of [false,true])test(existing?'reading an existing output after a rejected draft observes its old content':'reading a missing output after a rejected draft explains that it was not saved',async t=>{
+ const dir=await mkdtemp(join(tmpdir(),'aurora-rejected-output-')),source=join(dir,'source.md'),path=join(dir,'output.md');await writeFile(source,'Exact source sentence.\n');if(existing)await writeFile(path,'Old saved content.\n');
+ const client={model:'fixture',check:async()=>{},chat:async(messages,_tools,_signal,_chunk,options)=>{
+  if(options?.format?.properties.steps)return {content:JSON.stringify({steps:[{title:'Save a sourced note',check:'Save and read the required output.'}]})};
+  const context=JSON.parse(messages.at(-1).content),last=context.recentEvidence.map(JSON.parse).at(-1);
+  if(!last)return call('read_system_file',{path:source});
+  if(last.name==='read_system_file'&&last.result?.path===source)return call('propose_file_edit',{path,content:'Draft without the exact quote.\n',reason:'Requested sourced note'});
+  if(last.name==='propose_file_edit')return call('read_system_file',{path});
+  return call('request_help',{question:'Review the current output state.',reason:'Fixture reached the output observation.'});
+ }};
+ const app=await createApp({vault:join(dir,'vault'),data:join(dir,'data'),backups:join(dir,'backups'),projects:[],embedding:'',ollamaClient:client,workflowOptions:{pollMs:10,segmentMs:10000}});
+ t.after(async()=>{await app.workflows.close();app.actions.stopAll();await rm(dir,{recursive:true,force:true});});
+ const started=await app.workflows.start({goal:'Read the source and save its exact sentence.',requirements:{files:[{path,requiredText:['Exact source sentence.'],finalNewline:'required',lineEndings:'lf'}],commands:[]}});
+ await wait(async()=>{const w=await app.workflows.read(started.id);return w.status==='plan_review'&&!app.workflows.running.has(w.id);});await app.workflows.control(started.id,'approve_plan','',started.revision);
+ const w=await wait(async()=>{const value=await app.workflows.read(started.id);return value.status==='needs_help'&&!app.workflows.running.has(value.id)&&value;});
+ const read=w.operations.findLast(o=>o.name==='read_system_file'&&o.arguments.path===path);assert(read);
+ if(existing){assert.equal(read.status,'completed');assert.equal(read.result.content,'Old saved content.\n');}
+ else{assert.equal(read.status,'failed');assert.match(read.result.error,/rejected draft was not saved/);}
+ assert.equal((await app.store.list('actions')).length,0);
+});

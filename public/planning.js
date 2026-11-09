@@ -18,7 +18,10 @@ export function planning({api,escape,toast,state,refresh,setView,send,openWorkfl
   const localInput=value=>{if(!value)return '';const d=new Date(value);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);};
   const readTime=id=>$(id).value?new Date($(id).value).toISOString():null;
   const row=t=>`<div class="task-row"><input type="checkbox" aria-label="Complete ${escape(t.text)}" data-overview-task="${escape(t.path)}" data-line="${t.line}" data-revision="${t.revision}"><div><span class="task-text">${escape(t.text)}</span><small>${escape(t.due?'Due '+t.due:'No deadline')}${t.remindAt?' · Reminder '+escape(time(t.remindAt)):''}</small></div>${t.id?'<button data-open-task-detail="'+escape(t.id)+'">Task details</button>':''}<button data-task-schedule="${escape(t.path)}" data-line="${t.line}">Schedule</button></div>`;
-  function group(title,tasks){return `<section class="day-section"><h2>${title}<small>${tasks.length}</small></h2>${tasks.length?tasks.slice(0,40).map(row).join(''):'<p class="panel-help">Nothing here.</p>'}${tasks.length>40?'<p class="panel-help">More tasks are available in Tasks.</p>':''}</section>`;}
+  function group(title,tasks,key,open=false){
+    const content=`${tasks.length?tasks.slice(0,40).map(row).join(''):'<p class="panel-help">Nothing here.</p>'}${tasks.length>40?'<p class="panel-help">More tasks are available in Tasks.</p>':''}`;
+    return key?`<details class="day-section day-task-group" data-day-group="${key}" ${open?'open':''}><summary>${title}<small>${tasks.length}</small></summary>${content}</details>`:`<section class="day-section"><h2>${title}<small>${tasks.length}</small></h2>${content}</section>`;
+  }
   const google=mountGoogleCalendar($('#day-refresh').parentElement,{api,refresh:load});
   const execution=taskWorkflowsUI({host:$('#day-stats'),api,escape,toast,refresh,openWorkflow,prepareFollowup,editRequirements,serializeRequirements});
   const projects=mountTaskProjects($('#day-refresh').parentElement,{api,refresh:load});
@@ -67,7 +70,9 @@ export function planning({api,escape,toast,state,refresh,setView,send,openWorkfl
     $('#day-date').textContent=overview.date+' · '+overview.timezone;
     const stats=$('#day-stats');stats.hidden=!c.overdue&&!c.dueToday;
     stats.innerHTML=(c.overdue?`<span><strong>${c.overdue}</strong> overdue</span>`:'')+(c.dueToday?`<span><strong>${c.dueToday}</strong> for today</span>`:'');
-    $('#day-tasks').innerHTML=group('Overdue',overview.overdue)+group('Today',overview.today)+group('Coming up',overview.upcoming)+group('Without a date',overview.unscheduled);
+    $('#day-task-summary').textContent=`Tasks by date · ${overview.overdue.length} overdue · ${overview.today.length} today`;
+    const expanded=new Set([...$('#day-tasks').querySelectorAll('[data-day-group][open]')].map(el=>el.dataset.dayGroup));
+    $('#day-tasks').innerHTML=group('Overdue',overview.overdue)+group('Today',overview.today)+group('Coming up',overview.upcoming,'upcoming',expanded.has('upcoming'))+group('Without a date',overview.unscheduled,'unscheduled',expanded.has('unscheduled'));
     const cards=notes=>notes.map(n=>`<button class="day-note" data-note="${escape(n.path)}"><strong>${escape(n.title)}</strong><span>${escape(n.excerpt)}</span></button>`).join('')||'<p class="panel-help">Add a note to this folder when you are ready.</p>';
     $('#day-projects').innerHTML=cards(overview.projects);$('#day-profile').innerHTML=cards(overview.profile);if(!reminderSaving&&reminderAtStart===reminderEpoch)$('#reminders-enabled').checked=overview.remindersEnabled;
     $('#day-warning').textContent=overview.invalidSchedules?`${overview.invalidSchedules} task(s) have invalid reminder metadata. Open their Markdown notes to repair it.`:'';
