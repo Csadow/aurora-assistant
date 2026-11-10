@@ -58,3 +58,30 @@ for(const existing of [false,true])test(existing?'reading an existing output aft
  else{assert.equal(read.status,'failed');assert.match(read.result.error,/rejected draft was not saved/);}
  assert.equal((await app.store.list('actions')).length,0);
 });
+
+test('a declared output missing before its first write does not consume the ordinary failure streak',async t=>{
+ const dir=await mkdtemp(join(tmpdir(),'aurora-missing-output-')),path=join(dir,'output.md');
+ const client={model:'fixture',check:async()=>{},chat:async(messages,_tools,_signal,_chunk,options)=>{
+  if(options?.format?.properties.steps)return {content:JSON.stringify({steps:[{title:'Save the required note',check:'Read back the saved output.'}]})};
+  const c=JSON.parse(messages.at(-1).content),n=c.recentEvidence.length;
+  if(n<2)return call('read_system_file',{path});
+  if(n===2)return call('propose_formatted_file',{path,content:'Incomplete.\n',reason:'First draft missing required text'});
+  if(n===3)return call('propose_formatted_file',{path,content:'Required fact.\n',reason:'Correct the exact output'});
+  if(n===4)return call('read_system_file',{path});
+  return call('finish_step',{summary:'The required output was read back.',evidence:c.evidenceForCompletion.map(e=>e.id)});
+ }};
+ const app=await createApp({vault:join(dir,'vault'),data:join(dir,'data'),backups:join(dir,'backups'),projects:[],embedding:'',ollamaClient:client,workflowOptions:{pollMs:10,segmentMs:10000}});
+ t.after(async()=>{await app.workflows.close();app.actions.stopAll();await rm(dir,{recursive:true,force:true});});
+ const started=await app.workflows.start({goal:'Create an output note containing Required fact.',requirements:{files:[{path,requiredText:['Required fact.'],finalNewline:'required',lineEndings:'lf'}],commands:[]}});
+ assert.equal(started.version,36);await wait(async()=>{const w=await app.workflows.read(started.id);return w.status==='plan_review'&&!app.workflows.running.has(w.id);});
+ await app.workflows.control(started.id,'approve_plan','',started.revision);
+ const ready=await wait(async()=>{const w=await app.workflows.read(started.id);return w.status==='waiting_approval'&&!app.workflows.running.has(w.id)&&w;});
+ assert.deepEqual(ready.operations.slice(0,3).map(o=>o.status),['failed','failed','failed']);
+ assert(ready.operations[0].result.expectedMissingOutput&&ready.operations[1].result.expectedMissingOutput);
+ assert.match(ready.operations[0].result.error,/does not exist yet.*before reading it back/);
+ assert.match(ready.operations[2].result.error,/Missing required text/);
+ assert.equal(ready.operations[3].status,'waiting_approval');assert.equal((await app.store.list('actions')).length,1);
+ await assert.rejects(async()=>app.workflows.checkObservationProgress({version:36,operations:ready.operations.slice(0,2).concat(ready.operations[0]),requirementRetryStart:0}),/Three reads found declared output files still missing/);
+ const action=await app.store.get('actions',ready.operations[3].action);await app.actions.decide(action.id,'approve',action.digest);
+ await wait(async()=>(await app.workflows.read(started.id)).status==='completed');assert.equal(await readFile(path,'utf8'),'Required fact.\n');
+});

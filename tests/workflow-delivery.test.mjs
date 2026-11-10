@@ -20,6 +20,18 @@ test('offered checkpoint tools include only readback, completion and explicit co
  const w=fixture(),tools=['read_system_file','finish_step','propose_sourced_file','computer_action','verify_outcome','request_help'].map(name=>({type:'function',function:{name,parameters:{properties:{path:{type:'string'}}}}}));
  assert.deepEqual(deliveryTools(w,tools).map(t=>t.function.name),['read_system_file','finish_step','request_help']);read(w);assert(deliveryTools(w,tools).some(t=>t.function.name==='reopen_sourced_output'));assert.deepEqual(deliveryTools(w,tools)[0].function.parameters.properties.path.enum,[path]);
 });
+test('new sourced notes stop offering the same output read after a verified readback',()=>{
+ const w=fixture(),tools=['read_system_file','finish_step','request_help'].map(name=>({type:'function',function:{name,parameters:{properties:{path:{type:'string'}}}}}));w.version=36;
+ assert.equal(deliveryTools(w,tools)[0].function.name,'read_system_file');read(w);
+ assert.deepEqual(deliveryTools(w,tools).map(t=>t.function.name),['finish_step','request_help','reopen_sourced_output']);
+ let rejected;try{guardDelivery(w,'read_system_file',{path});}catch(error){rejected=error;}assert(rejected?.checkpointNoEffect);assert.match(rejected.message,/Repeating the same read creates no new evidence/);
+ w.operations.push({id:'duplicate',revision:1,name:'read_system_file',status:'failed',arguments:{path},result:{error:rejected.message,checkpointNoEffect:true}});
+ assert.equal(sourcedDelivery(w).phase,'ready');assert.equal(sourcedDelivery(w).evidence,'E2');
+ assert.deepEqual(deliveryTools(w,tools).map(t=>t.function.name),['finish_step','request_help','reopen_sourced_output']);
+ w.operations.push({id:'real-failure',revision:1,name:'read_system_file',status:'failed',arguments:{path},result:{error:'Path not found.'}});
+ assert.equal(sourcedDelivery(w),null);w.operations.pop();
+ guardDelivery(w,'finish_step',{});
+});
 test('a prior browser outcome keeps observation tools available until its own verification passes',()=>{
  const w=fixture();w.operations.unshift({id:'browser',name:'computer_action',status:'completed',arguments:{operation:'open_url'},result:{url:'https://example.test/',title:'Source page',text:'Observed source'}});
  assert.equal(sourcedDelivery(w),null);guardDelivery(w,'computer_action',{operation:'browser_read'});

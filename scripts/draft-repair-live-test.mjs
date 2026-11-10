@@ -16,11 +16,13 @@ const dir=await mkdtemp(join(tmpdir(),'aurora-repair-drill-')),data=join(dir,'da
 await mkdir(data);await writeFile(join(data,'models.json'),JSON.stringify({model:'qwen3.5:9b',thinking:true}));
 const quotes=['The ceiling is 120 credits.','The quote is 140 credits.','The catalog is 110 credits.'];await writeFile(budget,quotes[0]);await writeFile(offers,quotes.slice(1).join('\n')+'\nThe prices conflict; neither is established as current.');
 const draft='The vendor prices conflict (offers.md). Compare them with the stated ceiling (requirements.md).',required=[...quotes,'](offers.md)','](requirements.md)'];
-const client=new Ollama('http://127.0.0.1:11434','qwen3.5:9b'),chat=client.chat.bind(client);let seeded=false,realCalls=0;
+const missingRead=process.env.AURORA_DRILL_MISSING_READ==='1';
+const client=new Ollama('http://127.0.0.1:11434','qwen3.5:9b'),chat=client.chat.bind(client);let seeded=false,forcedRead=false,realCalls=0;
 const call=(name,args)=>({content:'',tool_calls:[{function:{name,arguments:args}}]});
 client.chat=async(m,tools,signal,chunk,options)=>{
  if(options?.format?.properties.steps)return {content:JSON.stringify({steps:[{title:'Repair the supplied draft',check:'Read the approved note with the original body, required quotations and source links.'}]})};
  if(!seeded){const c=JSON.parse(m.at(-1).content),last=c.recentEvidence.map(JSON.parse).at(-1);if(!last)return call('read_system_file',{path:budget});if(last.result?.path===budget)return call('read_system_file',{path:offers});seeded=true;return call('propose_file_edit',{path,content:draft,reason:'Deliberately incomplete fixture draft'});}
+ if(missingRead&&!forcedRead){forcedRead=true;return call('read_system_file',{path});}
  realCalls++;return chat(m,tools,signal,chunk,options);
 };
 const fingerprintFiles=['src/workflows.mjs','src/workflow-tools.mjs','src/workflow-prompt.mjs','src/workflow-calculations.mjs','src/workflow-arithmetic.mjs','src/workflow-citations.mjs','src/workflow-source-quotes.mjs'];
@@ -36,9 +38,9 @@ try{
   if(['completed','paused','needs_help','waiting_input','needs_verification','cancelled','failed'].includes(record.status)&&!app.workflows.running.has(w.id))break;
   await new Promise(r=>setTimeout(r,200));
  }
- const output=await readFile(path,'utf8').catch(()=>''),checks={completed:record.status==='completed',usedCombinedRepair:record.operations.some(o=>o.requestedTool==='propose_draft_repair'&&o.status==='completed'),oneApproval:approvals===1,preservedBody:output.startsWith('The vendor prices conflict [offers.md](offers.md). Compare them with the stated ceiling [requirements.md](requirements.md).'),requirements:required.every(t=>output.includes(t)),readback:record.operations.some(o=>o.name==='read_system_file'&&o.status==='completed'&&o.result?.path===path&&o.result?.content===output),sourcesUnchanged:await readFile(budget,'utf8')===quotes[0]&&await readFile(offers,'utf8')===quotes.slice(1).join('\n')+'\nThe prices conflict; neither is established as current.'};
+ const output=await readFile(path,'utf8').catch(()=>''),checks={completed:record.status==='completed',usedCombinedRepair:record.operations.some(o=>o.requestedTool==='propose_draft_repair'&&o.status==='completed'),...(missingRead?{missingReadFeedback:record.operations.some(o=>o.name==='read_system_file'&&o.status==='failed'&&o.result?.error?.includes('rejected draft was not saved'))}:{}),oneApproval:approvals===1,preservedBody:output.startsWith('The vendor prices conflict [offers.md](offers.md). Compare them with the stated ceiling [requirements.md](requirements.md).'),requirements:required.every(t=>output.includes(t)),readback:record.operations.some(o=>o.name==='read_system_file'&&o.status==='completed'&&o.result?.path===path&&o.result?.content===output),sourcesUnchanged:await readFile(budget,'utf8')===quotes[0]&&await readFile(offers,'utf8')===quotes.slice(1).join('\n')+'\nThe prices conflict; neither is established as current.'};
  for(const [file,digest] of Object.entries(fingerprint))assert.equal(sha(await readFile(new URL('../'+file,import.meta.url),'utf8')),digest,'Source changed during the drill');
- report={ok:Object.values(checks).every(Boolean),scope:'Seeded failure drill; only recovery and subsequent work use the real model. Not a free-form research success rate.',seconds:Math.round((Date.now()-started)/1000),model:'qwen3.5:9b',realCalls,approvals,checks,fingerprint,output,record};
+ report={ok:Object.values(checks).every(Boolean),scope:'Seeded failure drill; only recovery and subsequent work use the real model. Not a free-form research success rate.',missingRead,seconds:Math.round((Date.now()-started)/1000),model:'qwen3.5:9b',realCalls,approvals,checks,fingerprint,output,record};
 }catch(e){report={ok:false,error:e.message,realCalls,approvals,record};}
 finally{await app.workflows.close();app.actions.stopAll();while(app.actions.running.size)await new Promise(r=>setTimeout(r,20));await rm(dir,{recursive:true,force:true});}
 await writeFile(new URL('../artifacts/draft-repair-live-results.json',import.meta.url),JSON.stringify(report,null,2));console.log(JSON.stringify({...report,record:undefined,output:undefined,fingerprint:undefined}));if(!report.ok)process.exitCode=1;

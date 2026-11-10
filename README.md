@@ -5,7 +5,7 @@ chat, an editable Markdown memory vault, daily planning, and reviewed actions. A
 local Ollama model can handle chat and tools; optional cloud connections require
 separate setup and an explicit preview before information is sent.
 
-This repository is a source snapshot of desktop **1.157.0**. It does not contain
+This repository is a source snapshot of desktop **1.158.0**. It does not contain
 personal notes, conversations, credentials, model weights, development artifacts,
 or the original machine's Git history. The software is still being developed for
 a single trusted desktop user. It has not been prepared as a general installer.
@@ -38,6 +38,14 @@ can suggest local citation links and source review when the named files are in t
 request; the user reviews those checks before plan approval. One disposable local
 model trial produced the expected draft. Literal checks and source review still
 need human judgment about factual claims.
+
+The 1.158.0 update gives a workflow specific feedback when a sourced-note claim
+is only a citation marker or when it reads a declared output before saving it.
+After an approved note is read back unchanged, a repeated read preserves the
+completion checkpoint. One fresh local-model trial recovered from both mistakes
+and finished with one reviewed write. Earlier trials failed, and a separate task
+control sometimes claimed a review existed without creating one; reliability
+remains uneven.
 
 ## Run the local web app
 

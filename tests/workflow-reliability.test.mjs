@@ -38,7 +38,7 @@ scenario('project edit → real Node tests → explicit command outcome',async t
   await writeFile(join(f.project,'math.mjs'),'export const add=(a,b)=>a-b;\n');
   await writeFile(join(f.project,'math.test.mjs'),"import test from 'node:test';import assert from 'node:assert/strict';import {add} from './math.mjs';test('positive',()=>assert.equal(add(4,3),7));test('negative',()=>assert.equal(add(-2,7),5));\n");
   const w=await f.workflows.start({goal:'Fix addition and verify the actual tests'});await f.approve(w.id);await f.approve(w.id);const done=await f.wait(w.id,'completed');
-  assert(rejectedPremature);assert.equal(done.version,35);assert.match(done.operations.find(o=>o.name==='propose_command').result.content,/pass 2/);assert.deepEqual(missingOutcomes(done),[]);
+  assert(rejectedPremature);assert.equal(done.version,36);assert.match(done.operations.find(o=>o.name==='propose_command').result.content,/pass 2/);assert.deepEqual(missingOutcomes(done),[]);
   assert.equal((await f.workflows.read(w.id)).health.code,'completed');
   return {calls:done.calls,operations:done.operations.length,approvals:2,actualCommand:true,trace:done.operations};
 });

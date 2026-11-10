@@ -141,7 +141,7 @@ export class Workflows {
       const reviewedPlan=!!plannerTask||!!followUp||!!project||!!priorTask||!!taskSkill||hasRequirements({requirements:outputRequirements});
       const account=engine==='chatgpt'?this.assistant.chatgpt?.plan.active():null;
       if(engine==='chatgpt'&&(!account?.refreshToken||!account.model))throw new AppError('Connect ChatGPT and choose a model in Settings before starting this workflow.',409);
-      const w={id:reservedId||randomUUID(),...followUp?{followUp}:{},...plannerTask?{plannerTask}:{},version:35,engine,...account?{chatgptClientId:account.clientId,chatgptSubjectHash:sha(account.subject)}:{},routineContinuation,revision:1,directives:[],planHistory:[],conversation,goal:goal.trim(),scope,skills:snapshots,requirements:outputRequirements,...copyBeforeEdit?{copyBeforeEdit}:{},...project?{project}:{},...priorTask?{handoff:priorTask}:{},...reviewedPlan?{planReviewRequired:true,planApprovedRevision:null}:{},model:account?.model||this.assistant.ollama.model,generation:account?{}:{...this.assistant.ollama.generationOptions},status:'planned',created:now(),updated:now(),steps:[],current:0,operations:[],calls:0,activeMs:0,error:null};
+      const w={id:reservedId||randomUUID(),...followUp?{followUp}:{},...plannerTask?{plannerTask}:{},version:36,engine,...account?{chatgptClientId:account.clientId,chatgptSubjectHash:sha(account.subject)}:{},routineContinuation,revision:1,directives:[],planHistory:[],conversation,goal:goal.trim(),scope,skills:snapshots,requirements:outputRequirements,...copyBeforeEdit?{copyBeforeEdit}:{},...project?{project}:{},...priorTask?{handoff:priorTask}:{},...reviewedPlan?{planReviewRequired:true,planApprovedRevision:null}:{},model:account?.model||this.assistant.ollama.model,generation:account?{}:{...this.assistant.ollama.generationOptions},status:'planned',created:now(),updated:now(),steps:[],current:0,operations:[],calls:0,activeMs:0,error:null};
       validateRoutineContinuation(routineContinuation,w);
       await beforeSave?.();await this.save(w);if(!this.launch(w)){w.status='queued';await this.save(w);}return w;
     }finally{this.creating=false;}
@@ -554,7 +554,8 @@ export class Workflows {
           // Once an action exists, reconcile its journal before any further work.
           if(op.action){w.status='needs_verification';w.error=e.message;await this.save(w);return;}
           const missingRejectedOutput=w.version>=35&&repairing&&name==='read_system_file'&&args?.path===repairing.arguments.path&&e.message==='Path not found.';
-          op.status='failed';op.result={error:missingRejectedOutput?'The rejected draft was not saved, so this output file is still missing. Use repairableDraft.availableRepair when offered, or patch the rejected draft before reading the approved file.':e.status?e.message:'Tool failed: '+e.message,expectedArguments:argumentFeedback(this.toolsFor(w).find(t=>t.function.name===requestedTool)||definitions.find(t=>t.function.name===requestedTool)),...(e.copyReadiness?{copyReadiness:e.copyReadiness}:{}),...(e.requirementFailures?{requirementFailures:e.requirementFailures}:{}),...(e.repairFeedback?{repairFeedback:e.repairFeedback}:{}),...(e.expressionFeedback?{expressionFeedback:e.expressionFeedback}:{})};
+          const expectedMissingOutput=w.version>=36&&name==='read_system_file'&&e.message==='Path not found.'&&w.requirements?.files?.some(r=>r.path===args?.path)&&!w.operations.some(o=>o.name==='propose_file_edit'&&o.arguments?.path===args.path&&o.action&&o.status==='completed');
+          op.status='failed';op.result={error:missingRejectedOutput?'The rejected draft was not saved, so this output file is still missing. Use repairableDraft.availableRepair when offered, or patch the rejected draft before reading the approved file.':expectedMissingOutput?'This declared output file does not exist yet. Draft it with the available proposal tool and exact review before reading it back; do not repeat this missing-file read.':e.status?e.message:'Tool failed: '+e.message,...(expectedMissingOutput?{expectedMissingOutput:true}:{}),...(e.checkpointNoEffect?{checkpointNoEffect:true}:{}),expectedArguments:argumentFeedback(this.toolsFor(w).find(t=>t.function.name===requestedTool)||definitions.find(t=>t.function.name===requestedTool)),...(e.copyReadiness?{copyReadiness:e.copyReadiness}:{}),...(e.requirementFailures?{requirementFailures:e.requirementFailures}:{}),...(e.repairFeedback?{repairFeedback:e.repairFeedback}:{}),...(e.expressionFeedback?{expressionFeedback:e.expressionFeedback}:{})};
         }
         op.finished=now();await this.save(w);
         this.checkObservationProgress(w);
@@ -567,7 +568,9 @@ export class Workflows {
   }
   checkObservationProgress(w){
     if(repeatedObservations(w))throw Object.assign(new AppError('Five repeated file observations found no new state or verified progress. Review the saved evidence, narrow the remaining task, or request stronger help.'),{needsHelp:true});
-    if(w.operations.length>=3&&w.operations.slice(-3).every(o=>o.status==='failed'))throw Object.assign(new AppError('Three tool failures in a row. Review stronger help or continue locally.'),{needsHelp:true});
+    const last=w.operations.slice(-3);
+    if(last.length===3&&last.every(o=>o.status==='failed'&&o.result?.expectedMissingOutput))throw Object.assign(new AppError('Three reads found declared output files still missing. Draft the output before another read, or review stronger help.'),{needsHelp:true});
+    if(last.length===3&&last.every(o=>o.status==='failed'&&!o.result?.expectedMissingOutput))throw Object.assign(new AppError('Three tool failures in a row. Review stronger help or continue locally.'),{needsHelp:true});
   }
   async close(){this.closed=true;clearInterval(this.timer);while(this.ticking)await new Promise(r=>setTimeout(r,10));for(const r of this.running.values())r.controller.abort();await Promise.all([...this.running.values()].map(r=>r.promise));}
 }

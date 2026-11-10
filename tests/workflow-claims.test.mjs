@@ -24,6 +24,13 @@ test('fabricated or negation-altered quotes, absent claims, extra fields and out
  for(const c of [{...claim(),text:'A claim not in the draft.'},{...claim(),evidence:[{source:'E2',quote:sentence}]},{...claim(),evidence:[{source:'E1',quote:'Vega does not require an internet connection for editing.'}]},{...claim(),limits:''},{...claim(),verified:true},{...claim(),evidence:[{source:'E1',quote:sentence,revision:'forged'}]}])assert.throws(()=>buildClaimReview(w,'/work/note.md',content,[c]),/Source review/);
  assert.throws(()=>buildClaimReview(w,'/work/note.md',content,Array(13).fill(claim())));assert.throws(()=>buildClaimReview(w,'/work/note.md',content,[claim(),claim()]));
 });
+test('source review identifies citation-only claims before the count limit without creating a review',()=>{
+ const w=state(),marker={...claim(),text:'(source.md)'},tooMany=[claim(),marker,...Array(11).fill(claim())];
+ assert.throws(()=>buildClaimReview(w,'/work/note.md',content,tooMany),/Claim 2 is only a source filename or citation marker.*added to the generated note automatically/);
+ assert.throws(()=>buildClaimReview(w,'/work/note.md',content,[{...marker,text:'[Source](source.md)'}]),/citation marker/);
+ assert.throws(()=>buildClaimReview(w,'/work/note.md',content,Array(13).fill(claim())),/You supplied 13 claims; the limit is 12/);
+ assert.equal(w.operations.length,2);
+});
 test('conflicts require distinct observed sources; unknown and inference remain explicit assessments',()=>{
  const w=state(),c={...claim(),kind:'conflict'};assert.throws(()=>buildClaimReview(w,'/work/note.md',content,[c]),/two distinct/);
  c.evidence.push({source:'E2',quote:'Vega supports offline editing.'});assert.equal(buildClaimReview(w,'/work/note.md',content,[c]).claims[0].kind,'conflict');
