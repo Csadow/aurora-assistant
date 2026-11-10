@@ -70,6 +70,14 @@ test('HTML-like quoted labels and excerpts remain literal draft data',async()=>{
  const r=await fixture(d).run({goal,scope:'',requirements:base()});assert.equal(r.requirements.window.title,title);assert.equal(r.reasons[0].basis[0].quote,goal);
 });
 
+test('a sourced note can suggest claim review only with named local citation links',async()=>{
+ const path='/tmp/aurora-suggestion-decision.md',goal=`Write a sourced note in ${path}. Cite requirements.md and vendor.md, and review key claims against those sources.`,file={path,finalNewline:'any',lineEndings:'any',requiredText:['](requirements.md)','](vendor.md)'],sourceReview:true,reason:'The note needs cited local sources.'};
+ const d={files:[file],limitations:'Literal links and source review do not establish factual accuracy.'},i={goal,scope:'',requirements:base()},before=structuredClone(i),r=await fixture(d).run(i);
+ assert.deepEqual(i,before);assert.equal(r.requirements.files[0].sourceReview,true);assert.equal(r.reasons[0].sourceReview,true);
+ await assert.rejects(fixture(d).run({...i,goal:`Write a note in ${path}. Read requirements.md and vendor.md.`}),/source review/i);
+ for(const requiredText of [['](invented.md)'],[]])await assert.rejects(fixture({...d,files:[{...file,requiredText}]}).run(i),/source review/i);
+});
+
 test('explicit null optional values are absent, but a quoted string null still needs provenance',async()=>{
  const d=draft();d.browser.title=null;d.window.app=null;
  const r=await fixture(d).run();assert.deepEqual(r.requirements.browser,{url:d.browser.url});assert.deepEqual(r.requirements.window,{title:d.window.title});
