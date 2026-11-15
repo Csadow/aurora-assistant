@@ -16,6 +16,7 @@ import {critiqueRequired,critiqueInput,critiquePrompt,critiqueTool,critiqueRecei
 import {sourcedDelivery,deliveryTools,guardDelivery} from './workflow-delivery.mjs';
 import {needsSourceReview,claimReviewContext,sourcedFileTool,sourcedDraft,buildClaimReview,rebindClaimReview,assertClaimReview,checkClaimFiles} from './workflow-claims.mjs';
 import {sourceArithmetic,arithmeticContext} from './workflow-arithmetic.mjs';
+import {reviewedSourceObservations} from './workflow-source-observations.mjs';
 import {sourceValues,compareSourceValues,comparisonTools,comparisonContext} from './workflow-calculations.mjs';
 import {citationDraft} from './workflow-citations.mjs';
 import {recordToolContinuation,toolContinuationContext} from './workflow-continuation.mjs';
@@ -111,6 +112,7 @@ export class Workflows {
   }
   providerOptions(w,options){return w.engine==='chatgpt'?{...options,expectedAccount:w.chatgptClientId,expectedModel:w.model}:options;}
   async read(id){const w=await this.store.get('workflows',id),account=this.assistant.chatgpt?.plan.active();return {...w,completionReview:completionReview(w),projectProgress:projectProgress(w),repairFeedback:repairFeedback(w),repairPlan:repairPlanContext(w),unmappedExamples:unmappedExampleHistory(w),projectRecovery:projectCheckpointContext(w),requirementChecks:requirementStatus(w),health:workflowHealth(w,{actions:await this.store.list('actions'),desktop:this.actions.computer.status?.(),runner:this.running.get(id),busy:this.assistant.busy.size>0,model:w.engine==='chatgpt'?account?.model||'(disconnected)':this.assistant.ollama.model,generation:w.engine==='chatgpt'?w.generation:this.assistant.ollama.generationOptions,account:w.engine==='chatgpt'?account?.clientId:null,segmentMs:this.segmentMs})};}
+  async sourceObservations(actionId){const action=await this.store.get('actions',actionId);if(!action.workflow?.id)throw new AppError('This action has no saved workflow sources.',409);return reviewedSourceObservations(action,await this.store.get('workflows',action.workflow.id));}
   changes(id){return workflowChanges(this,id);}
   suggestRequirements(input,signal){return suggestRequirements(this,input,signal);}
   async list(){return (await this.store.list('workflows')).slice(0,100).map(w=>({id:w.id,goal:w.goal,status:w.status,updated:w.updated,engine:w.engine||'local',model:w.model,current:w.current,steps:w.steps.length,error:w.error}));}

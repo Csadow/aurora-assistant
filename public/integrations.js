@@ -1,4 +1,5 @@
 import {sourceClaimsHTML,sourceActionContextHTML} from './source-claims.js';
+import {sourceObservationShell,sourceObservationResultsHTML} from './source-observations.js';
 import {testCopyPreviewHTML,testCopyResultHTML,copyEditWarningHTML} from './test-copy.js';
 import {speechSettings} from './speech.js';
 import {modelSettings} from './models.js';
@@ -15,11 +16,25 @@ export function integrations({api,escape,toast,state,setView,loadConversation,se
   }
   async function refresh(){state.actions=await api('/api/actions');render();for(const id of continuations){const a=state.actions.find(x=>x.id===id);if(a&&['failed','stopped','interrupted'].includes(a.status)){continuations.delete(id);toast('The reviewed action did not complete. Open Actions for details.');}if(a?.status==='completed'&&!state.generating){continuations.delete(id);await use(a);}}}
   async function use(a){if(state.generating){toast('Wait for the current answer to finish.');return;}await loadConversation(a.conversation);await send('Use the reviewed action result to finish my request. Explain the result and any remaining steps.',a.id);}
+  function bindSourceViewer(actionId){
+    const panel=$('#action-review-content [data-source-observations]');if(!panel)return;
+    const results=panel.querySelector('[data-source-results]'),search=panel.querySelector('[data-source-search]');
+    let observations=null,loading=false;
+    const render=()=>{if(observations)results.innerHTML=sourceObservationResultsHTML(observations,search.value,escape);};
+    search.oninput=render;
+    panel.ontoggle=async()=>{
+      if(!panel.open||observations||loading)return;
+      loading=true;results.textContent='Loading recorded source reads…';
+      try{const receipt=await api('/api/action-sources?id='+encodeURIComponent(actionId));if(review?.id!==actionId||!panel.isConnected)return;observations=receipt.sources;render();}
+      catch(error){if(panel.isConnected)results.textContent=error.message+' Close and reopen to retry.';}
+      finally{loading=false;}
+    };
+  }
   async function openReview(id){
     review=await api('/api/action?id='+id);const a=review,p=a.payload;
     $('#action-review-title').textContent=a.kind==='test_copy'?'Review test in a copy':a.kind==='cloud'?'Review cloud consultation':a.kind==='write'?'Review file edit':a.kind==='computer'?'Review computer action':'Review command';
     let details=`<p>${escape(a.reason)}</p>${a.workflow?'<p class="panel-help">This action belongs to a saved workflow. Approval continues that workflow; Stop in Workflows pauses it.</p>':''}`;
-    if(p.requirementsCheck?.sourceReview)details+=sourceActionContextHTML(p.requirementsCheck.sourceContext,escape);
+    if(p.requirementsCheck?.sourceReview)details+=sourceActionContextHTML(p.requirementsCheck.sourceContext,escape)+sourceObservationShell(p.requirementsCheck.sourceReview);
     if(a.kind==='command')details+=`<p class="permission-notice">${escape(p.warning)}</p><label>Executable<pre>${escape(p.program)}</pre></label><label>Arguments (each item is one argument)<pre>${escape(JSON.stringify(p.args,null,2))}</pre></label><label>Working directory<pre>${escape(p.cwd)}</pre></label>`;
     if(a.kind==='test_copy')details+=testCopyPreviewHTML(p,escape)+testCopyResultHTML(a.result,escape);
     if(a.kind==='computer')details+=`<p class="permission-notice">${escape(p.warning||'This will control the selected application. Review the exact target and input.')} Approval expires after two minutes. Changed windows/pages require a new request.</p><label>Exact computer action<pre>${escape(JSON.stringify(p,null,2))}</pre></label>`;
@@ -31,7 +46,7 @@ export function integrations({api,escape,toast,state,setView,loadConversation,se
     if(p.requirementsCheck)details+=`<section id=action-requirement-check><h3>Output requirements checked</h3><ul>${p.requirementsCheck.checks.map(c=>`<li>${escape(c)}</li>`).join('')}</ul><p class=panel-help>${escape(p.requirementsCheck.notice)}</p></section>`;
     if(a.kind==='cloud')details+=`<p class="permission-notice">This request sends the text below to <strong>${escape(p.endpoint)}</strong>. Provider charges and data policies apply. Gemini free-tier content may be used to improve Google products.</p><p>${escape(p.model)} · maximum ${p.maxTokens} output tokens (reasoning may use part of this allowance) · one request, no automatic retries</p><label>Question<pre>${escape(p.question)}</pre></label><label>Context sent<pre>${escape(p.context||'(None)')}</pre></label><details><summary>Assistant instructions also sent</summary><pre>${escape(p.instruction)}</pre></details>`;
     if(a.result)details+=`<label>Result · ${escape(a.status)}<pre>${escape(a.result.content||JSON.stringify(a.result,null,2))}</pre></label>${a.result.backup?`<p>Original file backup: <code>${escape(a.result.backup)}</code></p>`:''}${a.result.usage?`<p>Provider usage: ${escape(JSON.stringify(a.result.usage))}</p>`:''}`;
-    $('#action-review-content').innerHTML=details;$('#action-approve').hidden=a.status!=='pending';$('#action-dismiss').hidden=a.status!=='pending';$('#action-ack-label').hidden=a.status!=='pending'||!(['command','computer','test_copy'].includes(a.kind)||p.requirementsCheck?.copyReview);$('#action-ack').checked=false;$('#action-continue-label').hidden=a.status!=='pending'||!['cloud','computer'].includes(a.kind)||!a.conversation;$('#action-continue').checked=true;$('#action-approve').disabled=!!(['command','computer','test_copy'].includes(a.kind)||p.requirementsCheck?.copyReview);$('#action-review-dialog').showModal();
+    $('#action-review-content').innerHTML=details;bindSourceViewer(a.id);$('#action-approve').hidden=a.status!=='pending';$('#action-dismiss').hidden=a.status!=='pending';$('#action-ack-label').hidden=a.status!=='pending'||!(['command','computer','test_copy'].includes(a.kind)||p.requirementsCheck?.copyReview);$('#action-ack').checked=false;$('#action-continue-label').hidden=a.status!=='pending'||!['cloud','computer'].includes(a.kind)||!a.conversation;$('#action-continue').checked=true;$('#action-approve').disabled=!!(['command','computer','test_copy'].includes(a.kind)||p.requirementsCheck?.copyReview);$('#action-review-dialog').showModal();
   }
   $('#action-ack').onchange=()=>$('#action-approve').disabled=!$('#action-ack').checked;$('#action-review-close').onclick=()=>$('#action-review-dialog').close();
   $('#action-approve').onclick=safe(async()=>{const a=review;await api('/api/action-decide',{id:a.id,decision:'approve',digest:a.digest});if(['cloud','computer'].includes(a.kind)&&a.conversation&&$('#action-continue').checked)continuations.add(a.id);$('#action-review-dialog').close();await refresh();toast('Approved. The action is running.');});
