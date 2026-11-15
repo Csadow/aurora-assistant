@@ -5,7 +5,7 @@ chat, an editable Markdown memory vault, daily planning, and reviewed actions. A
 local Ollama model can handle chat and tools; optional cloud connections require
 separate setup and an explicit preview before information is sent.
 
-This repository is a source snapshot of desktop **1.164.0**. It does not contain
+This repository is a source snapshot of desktop **1.165.0**. It does not contain
 personal notes, conversations, credentials, model weights, development artifacts,
 or the original machine's Git history. The software is still being developed for
 a single trusted desktop user. It has not been prepared as a general installer.
@@ -79,6 +79,11 @@ a saved form. A successful start clears only that form draft.
 The 1.164.0 update folds the recent-notes list in the chat Memory panel by
 default. Pinned context and open tasks remain visible; recent notes are one
 click away, and the disclosure choice survives a reload.
+
+The 1.165.0 update brings the original task goal and recorded numeric source
+comparisons into exact approval of sourced file edits. Reviewers can compare a
+recommendation with fixed constraints before accepting the write. Quote and
+link checks, and the optional model critique, remain fallible.
 
 ## Run the local web app
 

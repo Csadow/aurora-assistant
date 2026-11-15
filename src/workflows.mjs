@@ -52,6 +52,7 @@ const now=()=>new Date().toISOString();
 const active=new Set(['planning','running','queued','waiting_approval']);
 const success=op=>op.status==='completed'&&!op.result?.error;
 const completionEvidence=op=>success(op)&&!['finish_step','ask_user','consult_cloud','request_help','reopen_sourced_output','record_repair_plan','check_repair_expression','review_repair_example','select_project_tools','propose_test_copy','read_file_group','inspect_source_lines'].includes(op.name);
+const sourceActionContext=(w,op)=>({goal:w.goal,comparisons:(op?.sourceCalculations||[]).map(c=>c.expression)});
 const excerpt=(value,limit=4500)=>{const text=JSON.stringify(value);return text.length>limit?text.slice(0,limit)+' [excerpt; full result saved in workflow]':text;};
 const asksToOpenReview=(question,tool)=>{const request=question.trim().slice(-300);return /\b(?:would you like|should i|shall i|may i|can i|do you want)\b[\s\S]{0,160}\b(?:open|prepare|request|submit|start)\b[\s\S]{0,100}\b(?:review|approval)\b/i.test(request)||!!tool&&request.includes(tool)&&/\b(?:approval|approve)\b/i.test(request);};
 
@@ -71,7 +72,7 @@ export class Workflows {
       proposalRequirements(w,a.kind,a.payload);guardCopyControl(w,a.kind,a.payload);
       if(this.controls.has(w.id)||!active.has(w.status)||!op||op.action!==a.id||op.status!=='waiting_approval')throw new AppError('Resume this workflow before approving its action.',409);
       if(a.kind==='test_copy')await guardTestCopy(this,w,a.payload);
-      if(a.kind==='write'){const copy=await requireTestedCopy(this,w,a.payload);if(JSON.stringify(copy)!==JSON.stringify(a.payload.requirementsCheck?.copyReview||null))throw new AppError('The tested candidate or results changed. Request a new edit review.',409);const review=assertClaimReview(w,a.payload,op);if(review&&JSON.stringify(review)!==JSON.stringify(a.payload.requirementsCheck?.sourceReview))throw new AppError('The source review changed. Request a new exact proposal.',409);const critique=assertDraftCritique(w,a.payload,op);if(critique&&JSON.stringify(critique)!==JSON.stringify(a.payload.requirementsCheck?.draftCritique))throw new AppError('The draft critique changed. Request a new exact proposal.',409);if(review)this.actions.enabled();await checkClaimFiles(review,this.actions.system);}
+      if(a.kind==='write'){const copy=await requireTestedCopy(this,w,a.payload);if(JSON.stringify(copy)!==JSON.stringify(a.payload.requirementsCheck?.copyReview||null))throw new AppError('The tested candidate or results changed. Request a new edit review.',409);const review=assertClaimReview(w,a.payload,op);if(review&&JSON.stringify(review)!==JSON.stringify(a.payload.requirementsCheck?.sourceReview))throw new AppError('The source review changed. Request a new exact proposal.',409);if(review&&a.payload.requirementsCheck?.sourceContext&&JSON.stringify(sourceActionContext(w,op))!==JSON.stringify(a.payload.requirementsCheck.sourceContext))throw new AppError('The task constraints or recorded comparisons changed. Request a new exact proposal.',409);const critique=assertDraftCritique(w,a.payload,op);if(critique&&JSON.stringify(critique)!==JSON.stringify(a.payload.requirementsCheck?.draftCritique))throw new AppError('The draft critique changed. Request a new exact proposal.',409);if(review)this.actions.enabled();await checkClaimFiles(review,this.actions.system);}
       if(a.kind==='command'||w.version>=18&&a.kind==='computer')a.executionCheckpoint=w.version>=6?w.projectCheckpoint?.id||null:null;
     };
     actions.workflowPreflight=async(kind,payload,link)=>{
@@ -85,7 +86,7 @@ export class Workflows {
       if(kind==='test_copy'){await guardTestCopy(this,w,payload);return null;}
       if(!['write','command'].includes(kind))return null;
       await this.projectWorkspaces?.action(w.project,kind,payload);const checks=proposalRequirements(w,kind,payload);
-      if(kind==='write'){const copy=await requireTestedCopy(this,w,payload);if(copy){checks.copyReview=copy;checks.checks.push('Matching candidate tested in copies; review both results before applying.');}const op=w.operations.find(o=>o.id===link.operation),review=assertClaimReview(w,payload,op);if(review){const draftCritique=assertDraftCritique(w,payload,op);await checkClaimFiles(review,this.actions.system);return {...checks,sourceReview:review,...(draftCritique?{draftCritique}:{}),checks:[...(checks?.checks||[]),'Claim excerpts and draft membership checked; interpretation requires review']};}}
+      if(kind==='write'){const copy=await requireTestedCopy(this,w,payload);if(copy){checks.copyReview=copy;checks.checks.push('Matching candidate tested in copies; review both results before applying.');}const op=w.operations.find(o=>o.id===link.operation),review=assertClaimReview(w,payload,op);if(review){const draftCritique=assertDraftCritique(w,payload,op);await checkClaimFiles(review,this.actions.system);return {...checks,sourceReview:review,sourceContext:sourceActionContext(w,op),...(draftCritique?{draftCritique}:{}),checks:[...(checks?.checks||[]),'Claim excerpts and draft membership checked; interpretation requires review']};}}
       return checks;
     };
   }

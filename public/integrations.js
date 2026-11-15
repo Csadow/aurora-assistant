@@ -1,4 +1,4 @@
-import {sourceClaimsHTML} from './source-claims.js';
+import {sourceClaimsHTML,sourceActionContextHTML} from './source-claims.js';
 import {testCopyPreviewHTML,testCopyResultHTML,copyEditWarningHTML} from './test-copy.js';
 import {speechSettings} from './speech.js';
 import {modelSettings} from './models.js';
@@ -19,6 +19,7 @@ export function integrations({api,escape,toast,state,setView,loadConversation,se
     review=await api('/api/action?id='+id);const a=review,p=a.payload;
     $('#action-review-title').textContent=a.kind==='test_copy'?'Review test in a copy':a.kind==='cloud'?'Review cloud consultation':a.kind==='write'?'Review file edit':a.kind==='computer'?'Review computer action':'Review command';
     let details=`<p>${escape(a.reason)}</p>${a.workflow?'<p class="panel-help">This action belongs to a saved workflow. Approval continues that workflow; Stop in Workflows pauses it.</p>':''}`;
+    if(p.requirementsCheck?.sourceReview)details+=sourceActionContextHTML(p.requirementsCheck.sourceContext,escape);
     if(a.kind==='command')details+=`<p class="permission-notice">${escape(p.warning)}</p><label>Executable<pre>${escape(p.program)}</pre></label><label>Arguments (each item is one argument)<pre>${escape(JSON.stringify(p.args,null,2))}</pre></label><label>Working directory<pre>${escape(p.cwd)}</pre></label>`;
     if(a.kind==='test_copy')details+=testCopyPreviewHTML(p,escape)+testCopyResultHTML(a.result,escape);
     if(a.kind==='computer')details+=`<p class="permission-notice">${escape(p.warning||'This will control the selected application. Review the exact target and input.')} Approval expires after two minutes. Changed windows/pages require a new request.</p><label>Exact computer action<pre>${escape(JSON.stringify(p,null,2))}</pre></label>`;
