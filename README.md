@@ -5,7 +5,7 @@ chat, an editable Markdown memory vault, daily planning, and reviewed actions. A
 local Ollama model can handle chat and tools; optional cloud connections require
 separate setup and an explicit preview before information is sent.
 
-This repository is a source snapshot of desktop **1.165.0**. It does not contain
+This repository is a source snapshot of desktop **1.166.0**. It does not contain
 personal notes, conversations, credentials, model weights, development artifacts,
 or the original machine's Git history. The software is still being developed for
 a single trusted desktop user. It has not been prepared as a general installer.
@@ -84,6 +84,10 @@ The 1.165.0 update brings the original task goal and recorded numeric source
 comparisons into exact approval of sourced file edits. Reviewers can compare a
 recommendation with fixed constraints before accepting the write. Quote and
 link checks, and the optional model critique, remain fallible.
+
+The 1.166.0 update also shows the task scope and later user instructions in
+that exact sourced-edit review. They are bound to the proposal and checked
+again at approval. Older pending reviews retain their original approval path.
 
 ## Run the local web app
 

@@ -3,7 +3,9 @@
 export function sourceActionContextHTML(context,escape){
   if(!context||typeof context.goal!=='string')return '';
   const comparisons=Array.isArray(context.comparisons)?context.comparisons.filter(x=>typeof x==='string').slice(0,15):[];
-  return `<section data-source-task-context><h3>Check against the task</h3><p>${escape(context.goal)}</p><p class="permission-notice">Read the proposed conclusion against every fixed requirement. Literal quotes, links and a separate model critique can miss an incompatible recommendation.</p>${comparisons.length?`<p class="panel-help">Recorded number comparisons · ${comparisons.map(x=>`<code>${escape(x)}</code>`).join(' · ')}<br>Check units, periods and which number applies; these calculations do not verify the conclusion.</p>`:''}</section>`;
+  const scope=typeof context.scope==='string'?context.scope:'';
+  const updates=Array.isArray(context.updates)?context.updates.filter(x=>typeof x==='string'):[];
+  return `<section data-source-task-context><h3>Check against the task</h3><p><strong>Goal</strong> · ${escape(context.goal)}</p>${scope?`<p><strong>Scope</strong> · ${escape(scope)}</p>`:''}${updates.length?`<div><strong>Later task instructions</strong><ol>${updates.map(x=>`<li>${escape(x)}</li>`).join('')}</ol></div>`:''}<p class="permission-notice">Read the proposed conclusion against every fixed requirement. Literal quotes, links and a separate model critique can miss an incompatible recommendation.</p>${comparisons.length?`<p class="panel-help">Recorded number comparisons · ${comparisons.map(x=>`<code>${escape(x)}</code>`).join(' · ')}<br>Check units, periods and which number applies; these calculations do not verify the conclusion.</p>`:''}</section>`;
 }
 export function sourceClaimsHTML(review,escape,critique){
   const labels={source_statement:'Source statement',conflict:'Unresolved conflict',unknown:'Not established in these sources',inference:'Inference / recommendation'};
