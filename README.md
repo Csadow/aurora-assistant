@@ -5,7 +5,7 @@ chat, an editable Markdown memory vault, daily planning, and reviewed actions. A
 local Ollama model can handle chat and tools; optional cloud connections require
 separate setup and an explicit preview before information is sent.
 
-This repository is a source snapshot of desktop **1.158.0**. It does not contain
+This repository is a source snapshot of desktop **1.159.0**. It does not contain
 personal notes, conversations, credentials, model weights, development artifacts,
 or the original machine's Git history. The software is still being developed for
 a single trusted desktop user. It has not been prepared as a general installer.
@@ -46,6 +46,12 @@ completion checkpoint. One fresh local-model trial recovered from both mistakes
 and finished with one reviewed write. Earlier trials failed, and a separate task
 control sometimes claimed a review existed without creating one; reliability
 remains uneven.
+
+The 1.159.0 update shortens the populated Your day task list. Search stays
+visible, saved filters reopen when active, and each row keeps its two primary
+actions visible. More reveals secondary actions and the task's source note;
+return navigation restores focus. A fresh independent task-update trial passed,
+but the earlier false claim about an uncreated review remains unresolved.
 
 ## Run the local web app
 
