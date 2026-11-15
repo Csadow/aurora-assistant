@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {decisionNumberAlerts} from '../src/workflow-decision-alert.mjs';
+import {decisionNumberAlerts,decisionWording} from '../src/workflow-decision-alert.mjs';
 
 const limit={id:'L',value:'70',source:'/work/requirements.md',excerpt:'The monthly budget ceiling is 70 credits.'};
 const quote={id:'Q',value:'85',source:'/work/cedar-quote.md',excerpt:'Cedar costs 85 credits per month.'};
@@ -20,4 +20,34 @@ test('an unlabelled number or one-sided comparison does not imply a decision con
  assert.deepEqual(decisionNumberAlerts([compare(quote,{...limit,excerpt:'The number is 70.'},'>'),compare(catalog,{...limit,excerpt:'The number is 70.'},'<')]),[]);
  assert.deepEqual(decisionNumberAlerts([compare(quote,limit,'>'),compare({...catalog,excerpt:'Budget limit 65 credits.'},limit,'<')]),[]);
  assert.deepEqual(decisionNumberAlerts([]),[]);
+});
+
+test('exact decision wording is selected from authored inference claims, not source statements or model critique',()=>{
+ const alerts=decisionNumberAlerts([compare(quote,limit,'>'),compare(catalog,limit,'<')]);
+ const claims=[
+  {kind:'source_statement',text:'Vendor recommends Cedar.',limits:'Vendor wording only.'},
+  {kind:'inference',text:'No source establishes which Cedar price is current.',limits:'Unresolved.'},
+  {kind:'inference',text:'Decision: Cedar at 65 credits meets the budget.',limits:'If the catalog price is current; the quote is 85.'},
+  {kind:'inference',text:'Migration duration remains unknown.',limits:'No source gives duration.'}
+ ];
+ assert.deepEqual(decisionWording({claims},alerts),[{number:3,text:claims[2].text,limits:claims[2].limits}]);
+ assert.deepEqual(decisionWording({claims},[]),[]);
+});
+
+test('independent deferred and unrelated-option decisions keep their exact wording without an automatic verdict',()=>{
+ const alerts=[{limit:{value:'70'},below:[{value:'50'}],above:[{value:'85'}]}];
+ const deferred={kind:'inference',text:'Do not choose Cedar until its current price is verified.',limits:'The 65 and 85 credit sources disagree.'};
+ const unrelated={kind:'inference',text:'Choose Birch at 50 credits.',limits:'Ash at 85 is a different option.'};
+ assert.deepEqual(decisionWording({claims:[deferred]},alerts),[{number:1,text:deferred.text,limits:deferred.limits}]);
+ assert.deepEqual(decisionWording({claims:[unrelated]},alerts),[{number:1,text:unrelated.text,limits:unrelated.limits}]);
+});
+
+test('the cue and wording also cover a non-price route limit without deciding whether routes match',()=>{
+ const walking={id:'W',value:'10',source:'/work/requirements.md',excerpt:'Walking limit is 10 km.'};
+ const estimate={id:'E',value:'12',source:'/work/estimate.md',excerpt:'North route is 12 km.'};
+ const map={id:'M',value:'8',source:'/work/map.md',excerpt:'North route is 8 km.'};
+ const alerts=decisionNumberAlerts([compare(estimate,walking,'>'),compare(map,walking,'<')]);
+ assert.equal(alerts.length,1);assert.equal(alerts[0].limit.value,'10');
+ const choice={kind:'inference',text:'Choose North at the 8 km map distance.',limits:'The 12 km estimate is disputed.'};
+ assert.deepEqual(decisionWording({claims:[choice]},alerts),[{number:1,text:choice.text,limits:choice.limits}]);
 });

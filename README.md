@@ -5,7 +5,7 @@ chat, an editable Markdown memory vault, daily planning, and reviewed actions. A
 local Ollama model can handle chat and tools; optional cloud connections require
 separate setup and an explicit preview before information is sent.
 
-This repository is a source snapshot of desktop **1.169.0**. It does not contain
+This repository is a source snapshot of desktop **1.170.0**. It does not contain
 personal notes, conversations, credentials, model weights, development artifacts,
 or the original machine's Git history. The software is still being developed for
 a single trusted desktop user. It has not been prepared as a general installer.
@@ -106,6 +106,13 @@ separately. The local model still missed the same conditional decision in a
 read-only replay. Exact approval now highlights recorded values on opposite
 sides of a named limit and asks which applies, without treating the arithmetic
 or model assessment as proof. Older pending reviews retain their saved rules.
+
+The 1.170.0 update shows possible decision wording and its claim-review limits
+beside that number cue in new sourced-file approvals. This helps reviewers
+compare the proposal with disputed source values without searching a long note.
+The selection is a review aid, not a correctness verdict; older pending
+approvals keep their original format. Other phrasing can be missed, so the
+complete proposed note remains part of the review.
 
 ## Run the local web app
 

@@ -73,7 +73,7 @@ test('a declared output missing before its first write does not consume the ordi
  const app=await createApp({vault:join(dir,'vault'),data:join(dir,'data'),backups:join(dir,'backups'),projects:[],embedding:'',ollamaClient:client,workflowOptions:{pollMs:10,segmentMs:10000}});
  t.after(async()=>{await app.workflows.close();app.actions.stopAll();await rm(dir,{recursive:true,force:true});});
  const started=await app.workflows.start({goal:'Create an output note containing Required fact.',requirements:{files:[{path,requiredText:['Required fact.'],finalNewline:'required',lineEndings:'lf'}],commands:[]}});
- assert.equal(started.version,38);await wait(async()=>{const w=await app.workflows.read(started.id);return w.status==='plan_review'&&!app.workflows.running.has(w.id);});
+ assert.equal(started.version,39);await wait(async()=>{const w=await app.workflows.read(started.id);return w.status==='plan_review'&&!app.workflows.running.has(w.id);});
  await app.workflows.control(started.id,'approve_plan','',started.revision);
  const ready=await wait(async()=>{const w=await app.workflows.read(started.id);return w.status==='waiting_approval'&&!app.workflows.running.has(w.id)&&w;});
  assert.deepEqual(ready.operations.slice(0,3).map(o=>o.status),['failed','failed','failed']);
