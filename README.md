@@ -5,7 +5,7 @@ chat, an editable Markdown memory vault, daily planning, and reviewed actions. A
 local Ollama model can handle chat and tools; optional cloud connections require
 separate setup and an explicit preview before information is sent.
 
-This repository is a source snapshot of desktop **1.168.0**. It does not contain
+This repository is a source snapshot of desktop **1.169.0**. It does not contain
 personal notes, conversations, credentials, model weights, development artifacts,
 or the original machine's Git history. The software is still being developed for
 a single trusted desktop user. It has not been prepared as a general installer.
@@ -100,6 +100,12 @@ filename before optional critique. Older saved reviews retain their behavior;
 the review still needs human judgment about the recommendation. A disposable
 local-model trial reached a pending review, but its optional critique marked a
 decision based on an unresolved price conflict ready. No write was approved.
+
+The 1.169.0 update asks optional critique to assess the overall decision
+separately. The local model still missed the same conditional decision in a
+read-only replay. Exact approval now highlights recorded values on opposite
+sides of a named limit and asks which applies, without treating the arithmetic
+or model assessment as proof. Older pending reviews retain their saved rules.
 
 ## Run the local web app
 

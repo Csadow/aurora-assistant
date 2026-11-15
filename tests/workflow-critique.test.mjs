@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {sha} from '../src/vault.mjs';
-import {critiqueInput,critiqueReceipt,assertDraftCritique} from '../src/workflow-critique.mjs';
+import {critiqueInput,critiqueReceipt,assertDraftCritique,critiquePrompt,critiqueTool,critiquePromptFor,critiqueToolFor} from '../src/workflow-critique.mjs';
 const fixture=()=>{
  const w={version:5,revision:1,goal:'Keep offline editing and export available now.',scope:'Local sources only',directives:[],model:'fixture',generation:{think:true},requirements:{files:[{path:'/work/note.md',sourceReview:true,draftCritique:true,requiredText:['](source.md)']}],commands:[]},operations:[{id:'read',name:'read_system_file',revision:1,status:'completed',arguments:{path:'/work/source.md'},result:{path:'/work/source.md',content:'Export is not available.',revision:sha('Export is not available.')}}]};
  const op={id:'draft',arguments:{path:'/work/note.md',content:'The current offer does not qualify.'},sourceReview:{claims:[{text:'The current offer does not qualify.'}],sources:[{revision:sha('Export is not available.')}]}};
@@ -47,6 +47,24 @@ test('a single failed claim rejects the draft even when coverage and every other
 });
 test('critique is opt-in for new tasks and older reviewed proposals stay compatible',()=>{
  const {w,op}=fixture();assert.throws(()=>assertDraftCritique(w,op.arguments,op));delete w.requirements.files[0].draftCritique;assert.equal(assertDraftCritique(w,op.arguments,op),null);w.requirements.files[0].draftCritique=true;w.version=4;assert.equal(assertDraftCritique(w,op.arguments,op),null);
+});
+test('new decision audit requires a separate assessment and older saved receipts keep their prompt binding',()=>{
+ const {w,op}=fixture(),legacy=critiqueReceipt(w,op,response());
+ assert.equal(legacy.version,2);assert.equal(legacy.reviewerRevision,sha(critiquePrompt+JSON.stringify(critiqueTool)));
+ w.version=38;
+ assert.match(critiquePromptFor(w),/unresolved value for the same option breaks it/);
+ assert.deepEqual(critiqueToolFor(w).function.parameters.required,['coverage','claims','decision']);
+ assert.throws(()=>critiqueReceipt(w,op,response()),/decision assessment/);
+ const body=JSON.parse(response().content);
+ body.decision=assessment('revise','Claim 1 selects the offer now despite a conflicting value above the fixed ceiling. Verify the current value first.');
+ const reviewed=critiqueReceipt(w,op,{content:JSON.stringify(body)});
+ assert.equal(reviewed.version,3);assert.equal(reviewed.verdict,'revise');assert.match(reviewed.issues.at(-1),/^Decision: Claim 1/);
+ op.draftCritique=reviewed;assert.throws(()=>assertDraftCritique(w,op.arguments,op),/fresh successful critique/);
+ body.decision=assessment('ready','No present selection depends on an unresolved premise.');
+ op.draftCritique=critiqueReceipt(w,op,{content:JSON.stringify(body)});
+ assert.equal(assertDraftCritique(w,op.arguments,op),op.draftCritique);
+ op.draftCritique.reviewerRevision='changed';assert.throws(()=>assertDraftCritique(w,op.arguments,op),/inputs changed/);
+ w.version=5;op.draftCritique=legacy;assert.equal(assertDraftCritique(w,op.arguments,op),legacy);
 });
 test('review reporting accepts one assessment and never dispatches an action request',()=>{
  const {w,op}=fixture(),args=JSON.parse(response().content),call=(name,arguments_)=>({function:{name,arguments:arguments_}});

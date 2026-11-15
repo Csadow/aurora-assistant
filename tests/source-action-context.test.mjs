@@ -21,3 +21,9 @@ test('older source review context remains readable',()=>{
   assert.match(html,/Old pending task/);
   assert.doesNotMatch(html,/Later task instructions|<strong>Scope<\/strong>/);
 });
+
+test('a recorded limit straddle stays visible and escapes source paths in exact approval',()=>{
+ const html=sourceActionContextHTML({goal:'Choose a vendor',comparisons:['85 > 70','65 < 70'],numberAlerts:[{limit:{value:'70'},below:[{expression:'65 < 70',source:'/work/catalog<img src=x>.md'}],above:[{expression:'85 > 70',source:'/work/quote.md'}]}]},escape);
+ assert.match(html,/data-number-alert/);assert.match(html,/Numbers on both sides of 70/);assert.match(html,/65 &lt; 70/);assert.match(html,/85 &gt; 70/);
+ assert.match(html,/whether these values describe the same option/);assert.doesNotMatch(html,/<img/);
+});
