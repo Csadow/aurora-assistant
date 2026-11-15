@@ -12,15 +12,16 @@ import {config} from '../src/config.mjs';
 const cases={
  meeting:{path:'10 Profile/Meeting.md',before:'My weekly study meeting is on Thursday.',after:'My weekly study meeting is on Friday.',message:'My weekly study meeting has changed from Thursday to Friday. Correct the existing Meeting memory, preserving everything else. Prepare the correction for review.'},
  tea:{path:'10 Profile/Tea.md',before:'I prefer peppermint tea in the evening.',after:'I prefer chamomile tea in the evening.',message:'My evening tea preference changed from peppermint to chamomile. Correct the existing Tea memory, leaving everything else as it is. Prepare the correction for review.'},
+ commute:{path:'10 Profile/Commute.md',before:'I take the bus to campus on Tuesday.',after:'I take the tram to campus on Tuesday.',message:'I now take the tram rather than the bus to campus on Tuesday. Correct the existing Commute memory and leave all other details unchanged. Prepare the correction for review.'},
 };
-const name=process.argv[2]||'meeting',item=cases[name];if(!item)throw Error('Choose meeting or tea.');
+const name=process.argv[2]||'meeting',item=cases[name];if(!item)throw Error('Choose meeting, tea or commute.');
 const installed=await(await fetch('http://127.0.0.1:4717/api/local-model',{signal:AbortSignal.timeout(10000)})).json();
 const dir=await mkdtemp(join(tmpdir(),'aurora-memory-corrections-live-')),vault=new Vault(join(dir,'vault')),store=new Store(join(dir,'data'));
 const report={case:name,ok:false,model:installed.model,generation:installed.generation},started=Date.now(),events=[];
 try{
  await vault.init();await store.init();const ollama=new Ollama(config.ollama,installed.model);ollama.generationOptions=installed.generation;
  const assistant=new Assistant({vault,store,ollama,projects:new Projects([])});
- const note=await vault.save(item.path,'# '+(name==='meeting'?'Meeting':'Tea')+'\n\n'+item.before+'\n',null),conversation=await store.conversation();
+ const note=await vault.save(item.path,'# '+name[0].toUpperCase()+name.slice(1)+'\n\n'+item.before+'\n',null),conversation=await store.conversation();
  await assistant.chat({id:conversation.id,message:item.message,mode:'general'},AbortSignal.timeout(240000),e=>{events.push(e);if(e.type==='tool')console.log(JSON.stringify({name:e.name,status:e.status}));});
  const proposals=await store.list('proposals'),matching=proposals.filter(p=>p.kind==='memory_correction'&&p.path===item.path);
  report.answer=events.filter(e=>e.type==='chunk').map(e=>e.text).join('');report.proposals=proposals.map(p=>({kind:p.kind,path:p.path,status:p.status}));

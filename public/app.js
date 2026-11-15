@@ -212,6 +212,8 @@ function toggleContext(){const compactWorkflow=window.innerWidth>860&&window.inn
 function toggleSidebar(){if(window.innerWidth<=640||(window.innerWidth<=1100&&state.view!=='chat')){const open=document.body.classList.toggle('menu-open');$('#menu').setAttribute('aria-expanded',String(open));}else{document.body.classList.toggle('sidebar-closed');localStorage.setItem('aster-sidebar',document.body.classList.contains('sidebar-closed')?'closed':'open');$('#menu').setAttribute('aria-expanded',String(!document.body.classList.contains('sidebar-closed')));}}
 $('#menu').onclick=toggleSidebar;$('#collapse-sidebar').onclick=toggleSidebar;$('#toggle-context').onclick=toggleContext;$('#close-context').onclick=toggleContext;
 $('#tree-new-note').onclick=createNote;$('#context-new-note').onclick=createNote;
+$('#context-notes').open=localStorage.getItem('aster-context-notes')==='open';
+$('#context-notes').addEventListener('toggle',()=>localStorage.setItem('aster-context-notes',$('#context-notes').open?'open':'closed'));
 $('#quick-search').onclick=safe(async()=>{await setView('memory');$('#note-search').focus();});
 $('#file-tree').addEventListener('toggle',event=>{if(event.target.matches('.tree-folder'))localStorage.setItem('aster-folders',JSON.stringify([...$('#file-tree').querySelectorAll('details[open]')].map(d=>d.dataset.folder)));},true);
 $('#open-vault').onclick=safe(async()=>{if(window.asterDesktop)await window.asterDesktop.openVault();else{$('#settings').click();}});

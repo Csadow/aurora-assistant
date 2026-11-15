@@ -5,7 +5,7 @@ chat, an editable Markdown memory vault, daily planning, and reviewed actions. A
 local Ollama model can handle chat and tools; optional cloud connections require
 separate setup and an explicit preview before information is sent.
 
-This repository is a source snapshot of desktop **1.163.0**. It does not contain
+This repository is a source snapshot of desktop **1.164.0**. It does not contain
 personal notes, conversations, credentials, model weights, development artifacts,
 or the original machine's Git history. The software is still being developed for
 a single trusted desktop user. It has not been prepared as a general installer.
@@ -75,6 +75,10 @@ The 1.163.0 update saves unfinished new-workflow setup on the desktop and
 recovers it after a full reload. It compares selected skill, project and handoff
 revisions, retains unreadable drafts, and asks before replacing or discarding
 a saved form. A successful start clears only that form draft.
+
+The 1.164.0 update folds the recent-notes list in the chat Memory panel by
+default. Pinned context and open tasks remain visible; recent notes are one
+click away, and the disclosure choice survives a reload.
 
 ## Run the local web app
 
