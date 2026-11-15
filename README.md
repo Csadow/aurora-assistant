@@ -5,7 +5,7 @@ chat, an editable Markdown memory vault, daily planning, and reviewed actions. A
 local Ollama model can handle chat and tools; optional cloud connections require
 separate setup and an explicit preview before information is sent.
 
-This repository is a source snapshot of desktop **1.159.0**. It does not contain
+This repository is a source snapshot of desktop **1.160.0**. It does not contain
 personal notes, conversations, credentials, model weights, development artifacts,
 or the original machine's Git history. The software is still being developed for
 a single trusted desktop user. It has not been prepared as a general installer.
@@ -52,6 +52,12 @@ visible, saved filters reopen when active, and each row keeps its two primary
 actions visible. More reveals secondary actions and the task's source note;
 return navigation restores focus. A fresh independent task-update trial passed,
 but the earlier false claim about an uncreated review remains unresolved.
+
+The 1.160.0 update checks task-review claims against actual proposal results.
+If chat says a review is ready after only reading tasks, Aurora retries the
+proposal tool once. If no review is created, the saved reply says so clearly.
+List-only answers and successful reviews keep their ordinary text. A fresh
+local-model control passed, while broader model reliability remains unproven.
 
 ## Run the local web app
 

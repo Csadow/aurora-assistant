@@ -89,6 +89,7 @@ async function send(text,actionId){
     responseStarted=true;
     if(event.type==='sources'){assistantMessage.sources=event.sources;$('#recall-status').textContent=`${event.sources.length} references in context.`;el.querySelector('.sources').innerHTML=sourceButtons(event.sources);}
     if(event.type==='chunk'){assistantMessage.content+=event.text;el.querySelector('.message-body').innerHTML=format(assistantMessage.content,assistantMessage.sources);$('#activity').textContent='Aurora is writing…';scrollChat();}
+    if(event.type==='replace'){assistantMessage.content=event.text;el.querySelector('.message-body').innerHTML=format(assistantMessage.content,assistantMessage.sources);scrollChat();}
     if(event.type==='thinking')$('#activity').textContent=$('#chat-engine').value==='chatgpt'?'ChatGPT is reasoning…':'Aurora is reasoning locally… larger models can take several minutes.';
     if(event.type==='tool')$('#activity').textContent=`${event.status==='running'?'Working':'Finished'}: ${event.name.replaceAll('_',' ')}…`;
     if(event.type==='workflow'){assistantMessage.workflow=event.workflow.id;toast(event.workflow.control?'Task updated. Open its progress for the current state.':'Laptop task saved. Open its progress for reviews and Stop/Resume.');}

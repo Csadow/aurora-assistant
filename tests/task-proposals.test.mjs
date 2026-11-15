@@ -40,5 +40,78 @@ test('chat exposes task updates without system access and emits a review before 
  assert.equal((await f.vault.tasks())[0].duration,30);
 });
 
+test('a claimed task review after list_tasks is retried with the proposal tool before the reply is saved',async t=>{
+ const f=await setup(t);await f.vault.addTask('Study');let phase=0;
+ const {Assistant}=await import('../src/assistant.mjs');
+ const ollama={check:async()=>{},chat:async(messages,tools,signal,chunk)=>{
+  if(phase++===0)return {role:'assistant',tool_calls:[{function:{name:'list_tasks',arguments:{}}}]};
+  if(phase===2){const claim='I’ve prepared a draft change for your task in the Review inbox. You can accept this proposal.';chunk(claim);return {role:'assistant',content:claim};}
+  if(phase===3){assert(messages.some(m=>m.role==='system'&&m.content.includes('no propose_task_update tool succeeded')));const task=JSON.parse(messages.findLast(m=>m.role==='tool').content)[0];return {role:'assistant',tool_calls:[{function:{name:'propose_task_update',arguments:{path:task.path,line:task.line,revision:task.revision,changes:{duration:60}}}}]};}
+  const final='A 60-minute change is ready for review. Your saved task is unchanged.';chunk(final);return {role:'assistant',content:final};
+ }};
+ const assistant=new Assistant({...f,ollama,projects:{items:[]}}),c=await f.store.conversation(),events=[];
+ await assistant.chat({id:c.id,message:'Make my Study task 60 minutes'},AbortSignal.timeout(10000),e=>events.push(e));
+ assert(events.some(e=>e.type==='replace'&&e.text===''));
+ assert(events.some(e=>e.type==='proposal'&&e.proposal.kind==='task_update'));
+ assert.equal((await f.vault.tasks())[0].duration,30);
+ assert.equal(events.findLast(e=>e.type==='done').conversation.messages.at(-1).content,'A 60-minute change is ready for review. Your saved task is unchanged.');
+});
+
+test('a repeated false task-review claim is replaced with the observed no-review outcome',async t=>{
+ const f=await setup(t);await f.vault.addTask('Study');let phase=0;
+ const {Assistant}=await import('../src/assistant.mjs');
+ const ollama={check:async()=>{},chat:async(messages,tools,signal,chunk)=>{
+  if(phase++===0)return {role:'assistant',tool_calls:[{function:{name:'list_tasks',arguments:{}}}]};
+  const claim='I have prepared a draft change for your task. You can accept this proposal.';chunk(claim);return {role:'assistant',content:claim};
+ }};
+ const assistant=new Assistant({...f,ollama,projects:{items:[]}}),c=await f.store.conversation(),events=[];
+ await assistant.chat({id:c.id,message:'Make my Study task 60 minutes'},AbortSignal.timeout(10000),e=>events.push(e));
+ assert.equal(phase,3);assert.equal((await f.store.list('proposals')).length,0);
+ const last=events.findLast(e=>e.type==='replace');assert(last.text.includes('did not create a task-change review'));
+ assert.equal(events.findLast(e=>e.type==='done').conversation.messages.at(-1).content,last.text);
+ assert.equal((await f.vault.tasks())[0].duration,30);
+});
+
+test('a list-only task answer keeps its useful text without a review retry',async t=>{
+ const f=await setup(t);await f.vault.addTask('Study');let phase=0;
+ const {Assistant}=await import('../src/assistant.mjs');
+ const ollama={check:async()=>{},chat:async(messages,tools,signal,chunk)=>{
+  if(phase++===0)return {role:'assistant',tool_calls:[{function:{name:'list_tasks',arguments:{}}}]};
+  const answer='Your open task is Study. No review was created.';chunk(answer);return {role:'assistant',content:answer};
+ }};
+ const assistant=new Assistant({...f,ollama,projects:{items:[]}}),c=await f.store.conversation(),events=[];
+ await assistant.chat({id:c.id,message:'List my tasks'},AbortSignal.timeout(10000),e=>events.push(e));
+ assert.equal(phase,2);assert(!events.some(e=>e.type==='replace'));
+ assert.equal(events.findLast(e=>e.type==='done').conversation.messages.at(-1).content,'Your open task is Study. No review was created.');
+});
+
+test('listing tasks can accurately mention an older review without creating another',async t=>{
+ const f=await setup(t);await f.vault.addTask('Study');await update(f,{duration:60});let phase=0;
+ const {Assistant}=await import('../src/assistant.mjs');
+ const ollama={check:async()=>{},chat:async(messages,tools,signal,chunk)=>{
+  if(phase++===0)return {role:'assistant',tool_calls:[{function:{name:'list_tasks',arguments:{}}}]};
+  const answer='Your Study task is open. The earlier task change review is ready in the Review inbox.';chunk(answer);return {role:'assistant',content:answer};
+ }};
+ const assistant=new Assistant({...f,ollama,projects:{items:[]}}),c=await f.store.conversation(),events=[];
+ await assistant.chat({id:c.id,message:'List my tasks and existing reviews'},AbortSignal.timeout(10000),e=>events.push(e));
+ assert.equal(phase,2);assert(!events.some(e=>e.type==='replace'));
+ assert.equal(events.findLast(e=>e.type==='done').conversation.messages.at(-1).content,'Your Study task is open. The earlier task change review is ready in the Review inbox.');
+ assert.equal((await f.store.list('proposals')).length,1);
+});
+
+test('an interrupted false task-review claim is not kept as an achieved review',async t=>{
+ const f=await setup(t);await f.vault.addTask('Study');let phase=0;
+ const {Assistant}=await import('../src/assistant.mjs');
+ const ollama={check:async()=>{},chat:async(messages,tools,signal,chunk)=>{
+  if(phase++===0)return {role:'assistant',tool_calls:[{function:{name:'list_tasks',arguments:{}}}]};
+  chunk('I have prepared a draft change for your task.');throw Error('Fixture stream interrupted');
+ }};
+ const assistant=new Assistant({...f,ollama,projects:{items:[]}}),c=await f.store.conversation();
+ await assert.rejects(assistant.chat({id:c.id,message:'Make my Study task 60 minutes'},AbortSignal.timeout(10000),()=>{}),/Fixture stream interrupted/);
+ const saved=await f.store.get('conversations',c.id);assert(saved.messages.at(-1).interrupted);
+ assert(saved.messages.at(-1).content.includes('did not create a task-change review'));
+ assert.equal((await f.store.list('proposals')).length,0);
+});
+
 test('pending review survives restart and assigns a stable ID to a legacy checkbox',async t=>{const f=await setup(t),note=await f.vault.read('40 Tasks/Tasks.md');await f.vault.save(note.path,note.content+'\n- [ ] Legacy task\n',note.revision);const p=await update(f,{planDate:'2026-10-20',startTime:'14:00'});await new TaskProposals(f).decide(p.id,'accept');const task=(await f.vault.tasks())[0];assert.equal(task.text,'Legacy task');assert.equal(task.id,p.review.after.id);assert.equal(task.startTime,'14:00');});
 test('clearing a work block preserves its separately requested reminder and deadline',async t=>{const f=await setup(t);await f.vault.addTask(timed.text,timed);const p=await update(f,{planDate:null,startTime:null});await f.reviews.decide(p.id,'accept');const task=(await f.vault.tasks())[0];assert.equal(task.planDate,null);assert.equal(task.startTime,null);assert.equal(task.due,timed.due);assert.equal(task.remindAt,new Date(timed.remindAt).toISOString());});
