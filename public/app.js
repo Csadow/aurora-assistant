@@ -204,7 +204,7 @@ function renderWorkspace(){
   const item=(n,pinned=false)=>`<button class="context-note ${pinned?'pinned':''}" data-note="${escape(n.path)}">${icon(pinned?'spark':'file')}<span><strong>${escape(n.title)}</strong><small>${escape(pinned?n.preview.replace(/[#*\[\]]/g,'').slice(0,90):n.path.split('/')[0].replace(/^\d+ /,''))}</small></span></button>`;
   $('#pinned-notes').innerHTML=state.notes.filter(n=>n.pinned&&n.status!=='journal').map(n=>item(n,true)).join('')||'<p class="context-empty">Pin a profile note to keep it close.</p>';
   $('#recent-notes').innerHTML=state.notes.filter(n=>!n.pinned&&!['journal','archived'].includes(n.status)&&!n.path.startsWith('00 Home/')).slice(0,5).map(n=>item(n)).join('')||'<p class="context-empty">Your saved notes will appear here.</p>';
-  const tasks=state.tasks.filter(t=>!t.done);$('#context-tasks').innerHTML=tasks.slice(0,4).map(t=>`<div class="context-task">${escape(t.text)}</div>`).join('')||'<p class="context-empty">Nothing pending. A little breathing room.</p>';
+  const tasks=state.tasks.filter(t=>!t.done);$('#context-task-section').hidden=!tasks.length;$('#context-tasks').innerHTML=tasks.slice(0,4).map(t=>`<div class="context-task">${escape(t.text)}</div>`).join('');
   $('#conversation-count').textContent=state.conversations.filter(c=>c.count).length||'';
   if(!state.conversations.length)$('#conversations').innerHTML='<div class="empty-conversations">Your conversations will be here when you need them.</div>';
 }

@@ -46,7 +46,7 @@ export function taskSkillsUI({api,escape,toast,reload,refreshSkills,planRequired
       finally{draft.saving=false;await reload();}
     });
     if($('#workflow-skill-use'))$('#workflow-skill-use').onclick=safe(async()=>{
-      await refreshSkills();newInputs();$('#workflow-skill').value=draft.saved.id;$('#workflow-goal').value='';$('#workflow-scope').value='';await loadSelection();$('#workflow-form').scrollIntoView({block:'start'});$('#workflow-goal').focus();toast('Supply a new goal, workspace and inputs, then prepare the plan.');
+      await refreshSkills();newInputs();$('#workflow-skill').value=draft.saved.id;$('#workflow-goal').value='';$('#workflow-scope').value='';await loadSelection();$('#workflow-compose').open=true;$('#workflow-form').scrollIntoView({block:'start'});$('#workflow-goal').focus();toast('Supply a new goal, workspace and inputs, then prepare the plan.');
     });
   }
   return {parameters,clearInputs,render,loadSelection,isTask:()=>!!selected?.task};

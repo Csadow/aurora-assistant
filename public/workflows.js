@@ -9,6 +9,7 @@ import {requirementsUI} from './workflow-requirements.js';
 import {taskSkillsUI} from './task-skills.js';
 export function workflowsWorkspace({api,escape,toast,state,reviewAction,refreshSkills}){
   const $=s=>document.querySelector(s);let selected=localStorage.getItem('aurora-workflow'),loading=false,loadPromise=null,reloadPending=false,version='',current;const drafts=new Map(),memories=new Map(),models=new Map();
+  const compose=$('#workflow-compose');compose.open=!selected;
   const safe=fn=>async event=>{try{await fn(event);}catch(e){toast(e.message);}};
   const status=s=>String(s).replaceAll('_',' ');
   const fileReview=workflowReviewUI({api,escape,toast});
@@ -90,9 +91,9 @@ export function workflowsWorkspace({api,escape,toast,state,reviewAction,refreshS
     loadPromise=(async()=>{do{
       reloadPending=false;const requestedSelection=selected,list=await api('/api/workflows');
       if(selected!==requestedSelection){reloadPending=true;continue;}
-      $('#workflow-list').innerHTML=list.map(w=>`<article class="action-card"><span class="panel-help">${escape(status(w.status))} · ${w.engine==='chatgpt'?'ChatGPT':'Local'} · ${w.current}/${w.steps}</span><h3>${escape(w.goal)}</h3><button data-workflow-open="${w.id}">View workflow</button></article>`).join('');
       // An explicit selection can be older than the recent-list limit.
       if(!selected)selected=list[0]?.id||null;
+      $('#workflow-list').innerHTML=list.map(w=>`<article class="action-card"><span class="panel-help">${escape(status(w.status))} · ${w.engine==='chatgpt'?'ChatGPT':'Local'} · ${w.current}/${w.steps}</span><h3>${escape(w.goal)}</h3><button data-workflow-open="${w.id}">View workflow</button></article>`).join('');
       if(selected){const id=selected;let w;try{w=await api('/api/workflow?id='+id);}catch(e){if(selected!==id){reloadPending=true;continue;}current=null;version='';$('#workflow-detail').textContent='This workflow is unavailable. Choose another task or review its planner link.';throw e;}
         if(selected!==id){reloadPending=true;continue;}localStorage.setItem('aurora-workflow',id);render(w);
       }
@@ -113,7 +114,7 @@ export function workflowsWorkspace({api,escape,toast,state,reviewAction,refreshS
     if(focus&&!element)element=$('#workflow-health');
     if(element){if(!element.matches('textarea,input,button,select'))element.tabIndex=-1;element.focus({preventScroll:true});element.scrollIntoView({block:'center'});}
   }
-  $('#workflow-form').onsubmit=safe(async e=>{e.preventDefault();$('#workflow-start').disabled=true;try{const w=await api('/api/workflow-start',{goal:$('#workflow-goal').value,scope:$('#workflow-scope').value,engine:$('#workflow-engine').value,skills:$('#workflow-skill').value?[$('#workflow-skill').value]:[],...taskSkills.parameters(),...handoffs.parameters(),...project.parameters(),requirements:requirements.parameters()});$('#workflow-goal').value='';$('#workflow-scope').value='';taskSkills.clearInputs();requirements.clear();handoffs.clear();project.clear();selected=w.id;version='';await load();}finally{$('#workflow-start').disabled=false;}});
+  $('#workflow-form').onsubmit=safe(async e=>{e.preventDefault();$('#workflow-start').disabled=true;try{const w=await api('/api/workflow-start',{goal:$('#workflow-goal').value,scope:$('#workflow-scope').value,engine:$('#workflow-engine').value,skills:$('#workflow-skill').value?[$('#workflow-skill').value]:[],...taskSkills.parameters(),...handoffs.parameters(),...project.parameters(),requirements:requirements.parameters()});$('#workflow-goal').value='';$('#workflow-scope').value='';taskSkills.clearInputs();requirements.clear();handoffs.clear();project.clear();selected=w.id;version='';compose.open=false;await load();}finally{$('#workflow-start').disabled=false;}});
   $('#workflow-list').onclick=safe(async e=>{const id=e.target.closest('button')?.dataset.workflowOpen;if(id){selected=id;version='';await load();}});
   $('#workflow-detail').onclick=safe(async e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.workflowAction)await reviewAction(b.dataset.workflowAction);if(b.dataset.workflowControl){b.disabled=true;try{await api('/api/workflow-control',{id:b.dataset.workflowId||selected,operation:b.dataset.workflowControl,...b.dataset.workflowControl==='approve_plan'?{revision:Number(b.dataset.workflowRevision)}:{}});version='';await load();}finally{b.disabled=false;}}
     const recovery=b.dataset.workflowRecovery;
@@ -126,5 +127,5 @@ export function workflowsWorkspace({api,escape,toast,state,reviewAction,refreshS
     if(recovery==='follow_up'&&current)await followups.open(current.id);
   });
   setInterval(()=>{if(state.view==='workflows'&&!document.hidden)load().catch(()=>{});},1000);
-  return {load,prepareFollowup:async id=>{selected=id;version='';await load(true);await followups.open(id);},editRequirements:requirements.editor,serializeRequirements:requirements.serialize,prepareProject:async(id,handoff)=>{requirements.clear();handoffs.clear();project.clear();$('#workflow-skill').value='';await taskSkills.loadSelection();$('#workflow-goal').value='';$('#workflow-scope').value='';if(handoff)await handoffs.select(handoff);await project.choose(id);$('#workflow-goal').focus();},open:openWorkflow};
+  return {load,prepareFollowup:async id=>{selected=id;version='';await load(true);await followups.open(id);},editRequirements:requirements.editor,serializeRequirements:requirements.serialize,prepareProject:async(id,handoff)=>{compose.open=true;requirements.clear();handoffs.clear();project.clear();$('#workflow-skill').value='';await taskSkills.loadSelection();$('#workflow-goal').value='';$('#workflow-scope').value='';if(handoff)await handoffs.select(handoff);await project.choose(id);$('#workflow-goal').focus();},open:openWorkflow};
 }

@@ -179,6 +179,17 @@
 
 .tool-evidence{margin:6px 0 2px;color:var(--muted);font-size:11px}.tool-evidence summary{cursor:pointer;width:max-content;max-width:100%;padding:5px 0}.tool-evidence summary:hover{color:var(--text)}.tool-evidence ul{list-style:none;margin:4px 0 7px;padding:7px 10px;max-width:320px;border:1px solid var(--border);border-radius:7px;background:var(--panel)}.tool-evidence li{display:flex;justify-content:space-between;gap:16px;padding:3px 0}.tool-evidence li span:first-child{color:var(--text)}
 
+#workflow-compose{margin:0 0 16px}
+#workflow-compose>summary{display:flex;align-items:center;gap:9px;list-style:none;cursor:pointer;padding:10px 12px;border:1px solid var(--border);border-radius:7px;background:var(--raised);font-size:11px;font-weight:600}
+#workflow-compose>summary::-webkit-details-marker{display:none}
+#workflow-compose>summary::before{content:'+';font-size:16px;font-weight:400;line-height:1;color:var(--accent)}
+#workflow-compose[open]>summary::before{content:'−'}
+#workflow-compose>summary:hover{background:var(--hover)}
+#workflow-compose>form{padding-top:6px}
+#workflow-list .action-card{padding:10px 12px;margin-bottom:7px}
+#workflow-list .action-card h3{font-size:12px;margin:5px 0;line-height:1.4}
+#workflow-list .action-card button{font-size:10px;padding:5px 7px}
+
 @media (min-width:641px) and (max-width:1100px){
   body[data-workspace-view]:not([data-workspace-view="chat"]) #sidebar,
   body[data-workspace-view]:not([data-workspace-view="chat"]) #sidebar-resizer{display:none}
