@@ -31,6 +31,19 @@ test('source review identifies citation-only claims before the count limit witho
  assert.throws(()=>buildClaimReview(w,'/work/note.md',content,Array(13).fill(claim())),/You supplied 13 claims; the limit is 12/);
  assert.equal(w.operations.length,2);
 });
+test('new sourced notes reject internal number handles in authored prose without stranding older reviews',()=>{
+ const w=state();w.version=37;
+ const limits={...claim(),limits:'The comparison E1:N1 is below the ceiling.'};
+ assert.throws(()=>buildClaimReview(w,'/work/note.md',content,[limits]),/internal number handle E1:N1.*observed number/);
+ const text={...claim(),text:'E1:N1 means Vega costs 90 credits.'};
+ assert.throws(()=>buildClaimReview(w,'/work/note.md',text.text,[text]),/internal number handle E1:N1/);
+ const corrected={...claim(),limits:'Vega costs 90 credits per month in source.md; compare it with a compatible ceiling.'};
+ assert.equal(buildClaimReview(w,'/work/note.md',content,[corrected]).claims[0].limits,corrected.limits);
+ const older=state();older.version=36;
+ assert.equal(buildClaimReview(older,'/work/note.md',content,[limits]).claims[0].limits,limits.limits);
+ const literal=state();literal.version=37;literal.operations[0]=read('a','/work/source.md',sentence+'\nCode E1:N1. Cost: 90 credits per month.');
+ assert.equal(buildClaimReview(literal,'/work/note.md',content,[limits]).claims[0].limits,limits.limits);
+});
 test('conflicts require distinct observed sources; unknown and inference remain explicit assessments',()=>{
  const w=state(),c={...claim(),kind:'conflict'};assert.throws(()=>buildClaimReview(w,'/work/note.md',content,[c]),/two distinct/);
  c.evidence.push({source:'E2',quote:'Vega supports offline editing.'});assert.equal(buildClaimReview(w,'/work/note.md',content,[c]).claims[0].kind,'conflict');

@@ -5,7 +5,7 @@ chat, an editable Markdown memory vault, daily planning, and reviewed actions. A
 local Ollama model can handle chat and tools; optional cloud connections require
 separate setup and an explicit preview before information is sent.
 
-This repository is a source snapshot of desktop **1.167.0**. It does not contain
+This repository is a source snapshot of desktop **1.168.0**. It does not contain
 personal notes, conversations, credentials, model weights, development artifacts,
 or the original machine's Git history. The software is still being developed for
 a single trusted desktop user. It has not been prepared as a general installer.
@@ -93,6 +93,13 @@ The 1.167.0 update adds an on-demand, read-only source search to that review.
 It shows exact recorded lines and complete reads linked to the proposal, while
 approval still checks the current source files. Source text remains untrusted
 and does not certify the recommendation.
+
+The 1.168.0 update keeps internal numeric source handles out of the prose in
+new reviewed notes. A validation error asks for the observed value and source
+filename before optional critique. Older saved reviews retain their behavior;
+the review still needs human judgment about the recommendation. A disposable
+local-model trial reached a pending review, but its optional critique marked a
+decision based on an unresolved price conflict ready. No write was approved.
 
 ## Run the local web app
 
