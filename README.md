@@ -5,7 +5,7 @@ chat, an editable Markdown memory vault, daily planning, and reviewed actions. A
 local Ollama model can handle chat and tools; optional cloud connections require
 separate setup and an explicit preview before information is sent.
 
-This repository is a source snapshot of desktop **1.160.0**. It does not contain
+This repository is a source snapshot of desktop **1.161.0**. It does not contain
 personal notes, conversations, credentials, model weights, development artifacts,
 or the original machine's Git history. The software is still being developed for
 a single trusted desktop user. It has not been prepared as a general installer.
@@ -59,6 +59,11 @@ reading tasks, Aurora retries the proposal tool once. If no review is created,
 the saved reply says so clearly.
 List-only answers and successful reviews keep their ordinary text. A fresh
 local-model control passed, while broader model reliability remains unproven.
+
+The 1.161.0 update gives the selected workflow result more room on laptop
+screens. Memory remains available from its button as an overlay, while chat
+keeps notes alongside. Opening a note earlier does not cover a workflow on
+entry. Exact approvals and recovery details remain in the workflow.
 
 ## Run the local web app
 

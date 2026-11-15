@@ -32,7 +32,7 @@ async function refresh(){
   renderWorkspace();if(state.view==='memory')renderNotes();if(state.view==='tasks')renderTasks();if(state.view==='inbox')renderProposals();if(state.view==='graph')await renderGraph();await planner.load();if(state.view==='review'&&!reviewer.isBusy())await reviewer.load();if(state.view==='agents')await agentUI.load();if(state.view==='workflows')await workflowUI.load();if(state.view==='projects')await projectUI.load();
 }
 async function setView(view){
-  state.view=view;document.body.dataset.workspaceView=view;document.body.classList.remove('menu-open');$('#menu').setAttribute('aria-expanded','false');
+  state.view=view;document.body.dataset.workspaceView=view;document.body.classList.remove('menu-open','workflow-context-open');$('#menu').setAttribute('aria-expanded','false');
   document.querySelectorAll('.view').forEach(el=>el.hidden=el.id!==`${view}-view`);
   document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));
   $('#section-tab').hidden=view==='chat';$('#section-tab').textContent=({projects:'Projects',workflows:'Workflows',agents:'Agents & skills',overview:'Your day',review:'Memory review',memory:'Memory',tasks:'Tasks',graph:'Connections',inbox:'Review inbox',actions:'Actions'})[view]||'';$('#section-tab').dataset.view=view;document.querySelectorAll('.workspace-tab').forEach(el=>el.classList.toggle('active',el.dataset.view===view));
@@ -119,7 +119,7 @@ function renderNotes(){
   $('#note-grid').innerHTML=notes.length?notes.map(n=>`<button class="note-card" data-note="${escape(n.path)}"><small>${escape(n.path.split('/')[0].replace(/^\d+ /,''))}${n.pinned?' · PINNED':''}</small><h3>${escape(n.title)}</h3><p>${escape(n.preview.replace(/[#*\[\]]/g,''))}</p><footer>${escape(n.tags.map(t=>'#'+t).join(' '))||`${n.links.length} connection${n.links.length===1?'':'s'}`}</footer></button>`).join(''):'<div class="empty">No notes here yet. Add a note or try another search.</div>';
 }
 function confirmDiscard(){return !state.dirty||confirm('Discard the unsaved changes in this note?');}
-function showContext(){document.body.classList.remove('context-closed');document.body.classList.add('context-open');localStorage.setItem('aster-context','open');}
+function showContext(){document.body.classList.remove('context-closed');document.body.classList.add('context-open');document.body.classList.toggle('workflow-context-open',state.view==='workflows'&&window.innerWidth>860&&window.innerWidth<=1100);localStorage.setItem('aster-context','open');}
 function noteMode(edit){$('#note-content').hidden=!edit;$('#note-preview').hidden=edit;$('#edit-note').classList.toggle('active',edit);$('#preview-note').classList.toggle('active',!edit);if(!edit)$('#note-preview').innerHTML=format($('#note-content').value.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/,'').replace(/^\s*# .+\n/,''));}
 function markDirty(){state.dirty=true;$('#save-state').textContent='Unsaved';localStorage.setItem('aster-note-draft',JSON.stringify({path:$('#note-path').value,content:$('#note-content').value,revision:state.note?.revision??null}));}
 function clearDraft(){state.dirty=false;localStorage.removeItem('aster-note-draft');$('#save-state').textContent='Saved';}
@@ -208,7 +208,7 @@ function renderWorkspace(){
   $('#conversation-count').textContent=state.conversations.filter(c=>c.count).length||'';
   if(!state.conversations.length)$('#conversations').innerHTML='<div class="empty-conversations">Your conversations will be here when you need them.</div>';
 }
-function toggleContext(){const visible=window.innerWidth<=860?document.body.classList.contains('context-open')&&!document.body.classList.contains('context-closed'):!document.body.classList.contains('context-closed');if(visible){document.body.classList.add('context-closed');document.body.classList.remove('context-open');localStorage.setItem('aster-context','closed');}else showContext();}
+function toggleContext(){const compactWorkflow=window.innerWidth>860&&window.innerWidth<=1100&&state.view==='workflows';const compact=window.innerWidth<=860||compactWorkflow;const visible=compact?document.body.classList.contains('context-open')&&!document.body.classList.contains('context-closed')&&(!compactWorkflow||document.body.classList.contains('workflow-context-open')):!document.body.classList.contains('context-closed');if(visible){document.body.classList.add('context-closed');document.body.classList.remove('context-open','workflow-context-open');localStorage.setItem('aster-context','closed');}else showContext();}
 function toggleSidebar(){if(window.innerWidth<=640||(window.innerWidth<=1100&&state.view!=='chat')){const open=document.body.classList.toggle('menu-open');$('#menu').setAttribute('aria-expanded',String(open));}else{document.body.classList.toggle('sidebar-closed');localStorage.setItem('aster-sidebar',document.body.classList.contains('sidebar-closed')?'closed':'open');$('#menu').setAttribute('aria-expanded',String(!document.body.classList.contains('sidebar-closed')));}}
 $('#menu').onclick=toggleSidebar;$('#collapse-sidebar').onclick=toggleSidebar;$('#toggle-context').onclick=toggleContext;$('#close-context').onclick=toggleContext;
 $('#tree-new-note').onclick=createNote;$('#context-new-note').onclick=createNote;
