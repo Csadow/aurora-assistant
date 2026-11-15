@@ -54,8 +54,9 @@ return navigation restores focus. A fresh independent task-update trial passed,
 but the earlier false claim about an uncreated review remains unresolved.
 
 The 1.160.0 update checks task-review claims against actual proposal results.
-If chat says a review is ready after only reading tasks, Aurora retries the
-proposal tool once. If no review is created, the saved reply says so clearly.
+For a direct task-change request, if chat says a review is ready after only
+reading tasks, Aurora retries the proposal tool once. If no review is created,
+the saved reply says so clearly.
 List-only answers and successful reviews keep their ordinary text. A fresh
 local-model control passed, while broader model reliability remains unproven.
 
