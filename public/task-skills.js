@@ -1,6 +1,6 @@
 import {renderMarkdown} from './markdown.js';
 
-export function taskSkillsUI({api,escape,toast,reload,refreshSkills,planRequired=()=>false,newInputs=()=>{}}){
+export function taskSkillsUI({api,escape,toast,reload,refreshSkills,planRequired=()=>false,newInputs=()=>{},draftChanged=()=>{}}){
   const $=s=>document.querySelector(s),drafts=new Map();let selected=null,request=0,loading=false;
   const safe=fn=>async e=>{try{await fn(e);}catch(error){toast(error.message);}};
   async function loadSelection({preserve=false}={}){
@@ -17,7 +17,7 @@ export function taskSkillsUI({api,escape,toast,reload,refreshSkills,planRequired
       $('#workflow-skill-inputs').innerHTML=skill.task.error?`<p class="permission-notice">${escape(skill.task.error)} Edit this skill in Agents & skills.</p><button type="button" id="workflow-skill-refresh">Reload skill</button>`:`<p class="panel-help">Supply fresh inputs. Prepare plan does not perform actions; you review the plan before starting.</p>${skill.task.inputs.map(x=>`<label>${escape(x.label)}<textarea data-skill-input="${escape(x.name)}" rows="2" maxlength="1500" required>${escape(previous[x.name]||'')}</textarea></label>`).join('')}<details><summary>Review skill instructions</summary><div class="markdown-body">${renderMarkdown(skill.body)}</div></details><button type="button" id="workflow-skill-refresh">Reload skill</button>`;
       $('#workflow-skill-refresh').onclick=safe(()=>loadSelection({preserve:true}));
     }catch(e){if(version===request){$('#workflow-skill-inputs').textContent=e.message;throw e;}}
-    finally{if(version===request)loading=false;}
+    finally{if(version===request){loading=false;draftChanged();}}
   }
   $('#workflow-skill').onchange=safe(()=>loadSelection());
   function parameters(){
@@ -30,6 +30,20 @@ export function taskSkillsUI({api,escape,toast,reload,refreshSkills,planRequired
     return {skillRevision:selected.revision,skillInputs:Object.fromEntries([...document.querySelectorAll('[data-skill-input]')].map(x=>[x.dataset.skillInput,x.value]))};
   }
   function clearInputs(){for(const input of document.querySelectorAll('[data-skill-input]'))input.value='';}
+  function draftState(){return {id:$('#workflow-skill').value,revision:selected?.revision??null,inputs:Object.fromEntries([...document.querySelectorAll('[data-skill-input]')].map(x=>[x.dataset.skillInput,x.value]))};}
+  async function restoreDraft(value){
+    if(!value?.id)return [];
+    await refreshSkills();
+    if(![...$('#workflow-skill').options].some(option=>option.value===value.id))return ['skill'];
+    $('#workflow-skill').value=value.id;
+    await loadSelection();
+    const inputs=value.inputs&&typeof value.inputs==='object'&&!Array.isArray(value.inputs)?value.inputs:{};
+    const current=[...document.querySelectorAll('[data-skill-input]')];
+    for(const input of current)if(typeof inputs[input.dataset.skillInput]==='string')input.value=inputs[input.dataset.skillInput];
+    const missing=Object.keys(inputs).filter(name=>!current.some(input=>input.dataset.skillInput===name)).map(()=> 'skill input');
+    if(value.revision&&selected?.revision!==value.revision)missing.push('skill revision');
+    return missing;
+  }
   function render(w){
     const tasks=w.skills.filter(s=>s.task);
     if(tasks.length){const info=document.createElement('details');info.id='workflow-bound-skill';info.innerHTML=`<summary>Skill and inputs for this run</summary>${tasks.map(s=>`<h3>${escape(s.title||s.id)}</h3><p class="panel-help">This task keeps the reviewed skill version and its inputs. Later vault edits do not change this run.</p><dl>${Object.entries(s.inputs).map(([key,value])=>`<dt>${escape(key.replaceAll('_',' '))}</dt><dd>${escape(value)}</dd>`).join('')}</dl><div class="markdown-body">${renderMarkdown(s.content)}</div>`).join('')}`;$('#workflow-detail .workflow-steps').before(info);}
@@ -46,8 +60,8 @@ export function taskSkillsUI({api,escape,toast,reload,refreshSkills,planRequired
       finally{draft.saving=false;await reload();}
     });
     if($('#workflow-skill-use'))$('#workflow-skill-use').onclick=safe(async()=>{
-      await refreshSkills();newInputs();$('#workflow-skill').value=draft.saved.id;$('#workflow-goal').value='';$('#workflow-scope').value='';await loadSelection();$('#workflow-compose').open=true;$('#workflow-form').scrollIntoView({block:'start'});$('#workflow-goal').focus();toast('Supply a new goal, workspace and inputs, then prepare the plan.');
+      await refreshSkills();newInputs();$('#workflow-skill').value=draft.saved.id;$('#workflow-goal').value='';$('#workflow-scope').value='';await loadSelection();draftChanged();$('#workflow-compose').open=true;$('#workflow-form').scrollIntoView({block:'start'});$('#workflow-goal').focus();toast('Supply a new goal, workspace and inputs, then prepare the plan.');
     });
   }
-  return {parameters,clearInputs,render,loadSelection,isTask:()=>!!selected?.task};
+  return {parameters,clearInputs,render,loadSelection,draftState,restoreDraft,isTask:()=>!!selected?.task};
 }

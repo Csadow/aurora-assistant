@@ -5,7 +5,7 @@ chat, an editable Markdown memory vault, daily planning, and reviewed actions. A
 local Ollama model can handle chat and tools; optional cloud connections require
 separate setup and an explicit preview before information is sent.
 
-This repository is a source snapshot of desktop **1.162.0**. It does not contain
+This repository is a source snapshot of desktop **1.163.0**. It does not contain
 personal notes, conversations, credentials, model weights, development artifacts,
 or the original machine's Git history. The software is still being developed for
 a single trusted desktop user. It has not been prepared as a general installer.
@@ -70,6 +70,11 @@ when a saved task loads. Unfinished setup remains open through view navigation,
 and using a saved skill, project or handoff opens the form for fresh inputs.
 Saved task rows stay available in a smaller layout. Chat hides the empty Open
 tasks block in Memory and shows it again when unfinished tasks exist.
+
+The 1.163.0 update saves unfinished new-workflow setup on the desktop and
+recovers it after a full reload. It compares selected skill, project and handoff
+revisions, retains unreadable drafts, and asks before replacing or discarding
+a saved form. A successful start clears only that form draft.
 
 ## Run the local web app
 

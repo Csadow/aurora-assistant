@@ -1,4 +1,5 @@
 import {workflowReviewUIChecks} from './workflow-review-ui-checks.mjs';
+import {workflowFormDraftUIChecks} from './workflow-form-draft-ui-checks.mjs';
 import {recoveryWorkspaceUIChecks} from '../scripts/recovery-workspace-ui-checks.mjs';
 import {planningWeekUIChecks} from '../scripts/planning-week-ui-checks.mjs';
 import {cleanupRecoveryUIChecks} from '../scripts/cleanup-recovery-ui-checks.mjs';
@@ -122,7 +123,7 @@ const app=await createApp({vault:join(dir,'vault'),data:join(dir,'data'),backups
 await new Promise(r=>app.server.listen(0,'127.0.0.1',r));const url=`http://127.0.0.1:${app.server.address().port}`;
 const browser=spawn(process.env.CHROMIUM||'chromium',['--headless','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--no-first-run','--no-default-browser-check','--remote-debugging-port=0',`--user-data-dir=${dir}/browser`,'about:blank'],{stdio:['ignore','ignore','pipe']});let stderr='';browser.stderr.on('data',d=>stderr+=d);
 let socket,session,sequence=0;const pending=new Map(),errors=[],results=[];
-async function until(fn,label,timeout=12000){const end=Date.now()+timeout;let last;while(Date.now()<end){try{const v=await fn();if(v)return v;}catch(e){last=e;}await new Promise(r=>setTimeout(r,90));}throw new Error(`Timeout: ${label}. ${last?.message||stderr.slice(-500)}`);}
+async function until(fn,label,timeout=12000){const end=Date.now()+timeout;let last;while(Date.now()<end){try{const v=await fn();if(v)return v;}catch(e){last=e;}await new Promise(r=>setTimeout(r,90));}throw new Error(`Timeout: ${label}. ${last?.message||stderr.slice(-500)} ${JSON.stringify(errors.at(-1)||{}).slice(0,700)}`);}
 function command(method,params={},sid=session){const id=++sequence;return new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error(`CDP timeout ${method}`)),15000);pending.set(id,{resolve,reject,timer});socket.send(JSON.stringify({id,method,params,...(sid?{sessionId:sid}:{})}));});}
 async function evaluate(expression){const r=await command('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true,userGesture:true});if(r.exceptionDetails)throw new Error(r.exceptionDetails.exception?.description||r.exceptionDetails.text);return r.result.value;}
 const click=selector=>evaluate(`(()=>{const el=document.querySelector(${JSON.stringify(selector)});if(el.click)el.click();else el.dispatchEvent(new MouseEvent('click',{bubbles:true}));})()`);
@@ -358,6 +359,7 @@ try{
   await screenshot('narrow-recovery-filter-selected.png');await click('#continue-recovery-reset');check('short filter labels and reset remain usable in the narrow workspace');
   await command('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
   await workflowReviewUIChecks({evaluate,check});
+  await workflowFormDraftUIChecks({app,evaluate,command,click,set,until,check,handoffId:savedHandoff.id,dir});
   assert.equal(errors.length,0,JSON.stringify(errors));check('no uncaught browser errors');
 }catch(e){await writeFile(new URL('browser-failure-state.json',artifact),JSON.stringify({error:e.message,runs:await app.store.list('runs'),busy:app.assistant.busy.size,toast:await evaluate('document.querySelector("#toast").textContent').catch(()=>null)},null,2));throw e;}finally{
   await writeFile(new URL('browser-results.json',artifact),JSON.stringify({date:new Date().toISOString(),checks:results,errors},null,2));socket?.close();browser.kill('SIGTERM');app.server.closeAllConnections();await new Promise(r=>app.server.close(r));await new Promise(r=>setTimeout(r,300));await rm(dir,{recursive:true,force:true});

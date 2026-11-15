@@ -27,7 +27,23 @@ export function workflowProjectsUI({api,escape,toast,changed}){
     }finally{if(sequence===request){loading=false;changed();}}
   }
   $('#workflow-project').onchange=safe(()=>choose());$('#workflow-project-refresh').onclick=safe(async()=>{await refresh();await choose();});
-  return {refresh,clear,has:()=>!!selected||loading,choose:async id=>{const current=++request;await refresh();if(current!==request)return;$('#workflow-project').value=id;await choose(id);},parameters:()=>{
+  function draftState(){return {id:$('#workflow-project').value,revision:selected?.revision??null,checks:selected?[...document.querySelectorAll('[data-project-check]:checked')].map(el=>selected.checks[Number(el.dataset.projectCheck)].name):[],copyBeforeEditCheck:$('#workflow-copy-before-edit')?.value||'',routineContinuation:!!$('#workflow-routine-continuation')?.checked};}
+  async function restoreDraft(value){
+    if(!value?.id)return [];
+    await refresh();
+    if(![...$('#workflow-project').options].some(option=>option.value===value.id))return ['project'];
+    $('#workflow-project').value=value.id;await choose(value.id);
+    if(selected?.id!==value.id)return ['project'];
+    const wanted=Array.isArray(value.checks)?value.checks.filter(x=>typeof x==='string'):[];
+    for(const box of document.querySelectorAll('[data-project-check]'))box.checked=wanted.includes(selected.checks[Number(box.dataset.projectCheck)].name);
+    const copy=$('#workflow-copy-before-edit');if(copy)copy.value=value.copyBeforeEditCheck||'';
+    const routine=$('#workflow-routine-continuation');if(routine)routine.checked=!!value.routineContinuation;
+    const missing=wanted.filter(name=>!selected.checks.some(check=>check.name===name)).map(()=> 'project check');
+    if(value.copyBeforeEditCheck&&copy?.value!==value.copyBeforeEditCheck)missing.push('copy test');
+    if(value.revision&&selected.revision!==value.revision)missing.push('project revision');
+    return missing;
+  }
+  return {refresh,clear,draftState,restoreDraft,isLoading:()=>loading,has:()=>!!selected||loading,choose:async id=>{const current=++request;await refresh();if(current!==request)return;$('#workflow-project').value=id;await choose(id);},parameters:()=>{
     if(loading)throw Error('Wait for the selected project settings to load.');
     if($('#workflow-project').value&&!selected)throw Error('Reload and review this project before planning.');
     return selected?{projectId:selected.id,projectRevision:selected.revision,routineContinuation:!!$('#workflow-routine-continuation')?.checked,...$('#workflow-copy-before-edit')?.value?{copyBeforeEditCheck:$('#workflow-copy-before-edit').value}:{},projectCheckNames:[...document.querySelectorAll('[data-project-check]:checked')].map(el=>selected.checks[Number(el.dataset.projectCheck)].name)}:{};

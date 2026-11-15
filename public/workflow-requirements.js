@@ -35,6 +35,12 @@ export function requirementsUI({api,escape,toast,reload,changed}){
   }
   function serialize(value){return {files:value.files.map(r=>({...r,...(Object.hasOwn(r,'exactText')&&r.lineEndings==='crlf'?{exactText:r.exactText.replace(/\r?\n/g,'\r\n')}:{})})),commands:structuredClone(value.commands),...value.browser?{browser:{url:value.browser.url,...value.browser.title?{title:value.browser.title}:{}}}:{},...value.window?{window:{title:value.window.title,...value.window.app?{app:value.window.app}:{}}}:{}};}
   function clear(){generation++;$('#workflow-requirements-suggestion').replaceChildren();initial={files:[],commands:[]};editor($('#workflow-requirements-fields'),initial,initialChanged);changed();}
+  function restore(value){
+    if(!value||!Array.isArray(value.files)||!Array.isArray(value.commands)||value.files.length>30||value.commands.length>30||JSON.stringify(value).length>100000)throw Error('Unreadable result checks');
+    const previous=initial;
+    try{initial=serialize(value);editor($('#workflow-requirements-fields'),initial,initialChanged);changed();}
+    catch(error){initial=previous;editor($('#workflow-requirements-fields'),initial,initialChanged);throw error;}
+  }
   function render(w){
     const required=w.requirements||{files:[],commands:[]},count=required.files.length+required.commands.length+Number(!!required.browser)+Number(!!required.window),section=document.createElement('section');section.className='workflow-requirements';section.id='workflow-requirements-status';
     if(!count&&['completed','cancelled'].includes(w.status)&&!w.operations.some(o=>o.result?.requirementFailures))return;
@@ -66,7 +72,7 @@ export function requirementsUI({api,escape,toast,reload,changed}){
     }catch(e){if(ticket===generation)host.textContent=e.message;throw e;}finally{pending=false;button.disabled=false;}
   });
   editor($('#workflow-requirements-fields'),initial,initialChanged);
-  return {editor,serialize,parameters:()=>serialize(initial),has:()=>!!(initial.files.length||initial.commands.length||initial.browser||initial.window),clear,render};
+  return {editor,serialize,parameters:()=>serialize(initial),has:()=>!!(initial.files.length||initial.commands.length||initial.browser||initial.window),clear,restore,render};
 }
 
 function desktopEditors(value,escape){
