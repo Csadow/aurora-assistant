@@ -86,3 +86,14 @@ test('ambiguous numeric provenance cannot become a resolved premise',()=>{
  const [missing]=decisionPremises(decisionNumberAlerts([compare(quote,limit,'>'),compare(catalog,limit,'<')]),[]);
  assert.equal(missing.status,'unresolved');assert.equal(missing.above,null);
 });
+
+test('an identifier in a neighboring sentence does not attach to the observed price',()=>{
+ const l={...limit,id:'L3',excerpt:'Budget limit 70 credits per month.'};
+ const a={...quote,id:'A3',excerpt:'Offer CB-17 is retired. New rate is 85 credits per month.'};
+ const b={...catalog,id:'B3',excerpt:'Offer CB-17 costs 65 credits per month.'};
+ const comparisons=[compare(a,l,'>'),compare(b,l,'<')];
+ const [premise]=decisionPremises(decisionNumberAlerts(comparisons),comparisons);
+ assert.equal(premise.above.identifier,null);
+ assert.equal(premise.below.identifier,'CB-17');
+ assert.equal(premise.status,'unresolved');
+});

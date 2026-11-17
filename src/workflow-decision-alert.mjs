@@ -32,9 +32,17 @@ const observation=(item,comparisons)=>{
  if(values.size!==1)return null;
  const v=[...values.values()][0],excerpt=typeof v.excerpt==='string'?v.excerpt:'';
  const numbers=[...excerpt.matchAll(/(?<![\p{L}\p{N}_.,+\-])[-+]?\d{1,12}(?:\.\d{1,6})?(?![\p{L}\p{N}_,+\-]|\.\d)/gu)].filter(m=>m[0]===v.value);
- const following=numbers.length===1?excerpt.slice(numbers[0].index+v.value.length).trimStart():'';
+ const index=numbers.length===1?numbers[0].index:-1;
+ const following=index>=0?excerpt.slice(index+v.value.length).trimStart():'';
  const unitMatches=units.flatMap(u=>{const m=u.pattern.exec(following);return m?[{literal:m[0],kind:u.kind(...m)}]:[];});
- const ids=[...excerpt.matchAll(identifierPattern)].map(m=>m[1]);
+ // A neighboring sentence can name a different offer. Keep only the clause
+ // containing this exact number; a clipped or ambiguous clause stays unknown.
+ const before=index>=0?excerpt.slice(0,index):'';
+ const start=Math.max(before.lastIndexOf('.'),before.lastIndexOf('!'),before.lastIndexOf('?'),before.lastIndexOf(';'),before.lastIndexOf('\n'))+1;
+ const after=index>=0?excerpt.slice(index+v.value.length):'';
+ const stop=after.search(/[.!?;\n]/);
+ const clause=index>=0?excerpt.slice(start,stop<0?undefined:index+v.value.length+stop):'';
+ const ids=[...clause.matchAll(identifierPattern)].map(m=>m[1]);
  const identifiers=[...new Set(ids.map(id=>id.toLowerCase()))];
  return {id:v.id,value:v.value,source:v.source,sourceRevision:v.sourceRevision||'',line:v.line||null,excerpt,unit:unitMatches.length===1?unitMatches[0]:null,identifier:identifiers.length===1?ids[0]:null};
 };
