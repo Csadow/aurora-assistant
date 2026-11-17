@@ -13,7 +13,7 @@ import {recordRepairPlan,repairPlanContext,repairFeedback,proposeRepair,checkRep
 import {checkpointProject,projectCheckpointContext,beforeCheckpoint} from './workflow-checkpoint.mjs';
 import {editableClaims,critiqueFeedback} from './workflow-substance.mjs';
 import {critiqueRequired,critiqueInput,critiquePromptFor,critiqueToolFor,critiqueReceipt,assertDraftCritique} from './workflow-critique.mjs';
-import {decisionNumberAlerts,decisionWording} from './workflow-decision-alert.mjs';
+import {decisionNumberAlerts,decisionWording,decisionPremises} from './workflow-decision-alert.mjs';
 import {sourcedDelivery,deliveryTools,guardDelivery} from './workflow-delivery.mjs';
 import {needsSourceReview,claimReviewContext,sourcedFileTool,sourcedDraft,buildClaimReview,rebindClaimReview,assertClaimReview,checkClaimFiles} from './workflow-claims.mjs';
 import {sourceArithmetic,arithmeticContext} from './workflow-arithmetic.mjs';
@@ -54,7 +54,7 @@ const now=()=>new Date().toISOString();
 const active=new Set(['planning','running','queued','waiting_approval']);
 const success=op=>op.status==='completed'&&!op.result?.error;
 const completionEvidence=op=>success(op)&&!['finish_step','ask_user','consult_cloud','request_help','reopen_sourced_output','record_repair_plan','check_repair_expression','review_repair_example','select_project_tools','propose_test_copy','read_file_group','inspect_source_lines'].includes(op.name);
-const sourceActionContext=(w,op,version=w.version>=39?4:w.version>=38?3:2)=>{
+const sourceActionContext=(w,op,version=w.version>=40?5:w.version>=39?4:w.version>=38?3:2)=>{
  const numberAlerts=version>=3?decisionNumberAlerts(op?.sourceCalculations):[];
  return {
   ...(version>=2?{version}:{}),
@@ -62,7 +62,8 @@ const sourceActionContext=(w,op,version=w.version>=39?4:w.version>=38?3:2)=>{
   ...(version>=2?{scope:w.scope||'',updates:(w.directives||[]).map(d=>d.instruction)}:{}),
   comparisons:(op?.sourceCalculations||[]).map(c=>c.expression),
   ...(version>=3?{numberAlerts}:{}),
-  ...(version>=4?{decisionWording:decisionWording(op?.sourceReview,numberAlerts)}:{})
+  ...(version>=4?{decisionWording:decisionWording(op?.sourceReview,numberAlerts)}:{}),
+  ...(version>=5?{decisionPremises:decisionPremises(numberAlerts,op?.sourceCalculations)}:{})
  };
 };
 const excerpt=(value,limit=4500)=>{const text=JSON.stringify(value);return text.length>limit?text.slice(0,limit)+' [excerpt; full result saved in workflow]':text;};
@@ -84,7 +85,7 @@ export class Workflows {
       proposalRequirements(w,a.kind,a.payload);guardCopyControl(w,a.kind,a.payload);
       if(this.controls.has(w.id)||!active.has(w.status)||!op||op.action!==a.id||op.status!=='waiting_approval')throw new AppError('Resume this workflow before approving its action.',409);
       if(a.kind==='test_copy')await guardTestCopy(this,w,a.payload);
-      if(a.kind==='write'){const copy=await requireTestedCopy(this,w,a.payload);if(JSON.stringify(copy)!==JSON.stringify(a.payload.requirementsCheck?.copyReview||null))throw new AppError('The tested candidate or results changed. Request a new edit review.',409);const review=assertClaimReview(w,a.payload,op);if(review&&JSON.stringify(review)!==JSON.stringify(a.payload.requirementsCheck?.sourceReview))throw new AppError('The source review changed. Request a new exact proposal.',409);const context=a.payload.requirementsCheck?.sourceContext;if(review&&context&&JSON.stringify(sourceActionContext(w,op,context.version===4?4:context.version===3?3:context.version===2?2:1))!==JSON.stringify(context))throw new AppError('The task constraints or recorded comparisons changed. Request a new exact proposal.',409);const critique=assertDraftCritique(w,a.payload,op);if(critique&&JSON.stringify(critique)!==JSON.stringify(a.payload.requirementsCheck?.draftCritique))throw new AppError('The draft critique changed. Request a new exact proposal.',409);if(review)this.actions.enabled();await checkClaimFiles(review,this.actions.system);}
+      if(a.kind==='write'){const copy=await requireTestedCopy(this,w,a.payload);if(JSON.stringify(copy)!==JSON.stringify(a.payload.requirementsCheck?.copyReview||null))throw new AppError('The tested candidate or results changed. Request a new edit review.',409);const review=assertClaimReview(w,a.payload,op);if(review&&JSON.stringify(review)!==JSON.stringify(a.payload.requirementsCheck?.sourceReview))throw new AppError('The source review changed. Request a new exact proposal.',409);const context=a.payload.requirementsCheck?.sourceContext;if(review&&context&&JSON.stringify(sourceActionContext(w,op,context.version===5?5:context.version===4?4:context.version===3?3:context.version===2?2:1))!==JSON.stringify(context))throw new AppError('The task constraints or recorded comparisons changed. Request a new exact proposal.',409);const critique=assertDraftCritique(w,a.payload,op);if(critique&&JSON.stringify(critique)!==JSON.stringify(a.payload.requirementsCheck?.draftCritique))throw new AppError('The draft critique changed. Request a new exact proposal.',409);if(review)this.actions.enabled();await checkClaimFiles(review,this.actions.system);}
       if(a.kind==='command'||w.version>=18&&a.kind==='computer')a.executionCheckpoint=w.version>=6?w.projectCheckpoint?.id||null:null;
     };
     actions.workflowPreflight=async(kind,payload,link)=>{
@@ -155,7 +156,7 @@ export class Workflows {
       const reviewedPlan=!!plannerTask||!!followUp||!!project||!!priorTask||!!taskSkill||hasRequirements({requirements:outputRequirements});
       const account=engine==='chatgpt'?this.assistant.chatgpt?.plan.active():null;
       if(engine==='chatgpt'&&(!account?.refreshToken||!account.model))throw new AppError('Connect ChatGPT and choose a model in Settings before starting this workflow.',409);
-      const w={id:reservedId||randomUUID(),...followUp?{followUp}:{},...plannerTask?{plannerTask}:{},version:39,engine,...account?{chatgptClientId:account.clientId,chatgptSubjectHash:sha(account.subject)}:{},routineContinuation,revision:1,directives:[],planHistory:[],conversation,goal:goal.trim(),scope,skills:snapshots,requirements:outputRequirements,...copyBeforeEdit?{copyBeforeEdit}:{},...project?{project}:{},...priorTask?{handoff:priorTask}:{},...reviewedPlan?{planReviewRequired:true,planApprovedRevision:null}:{},model:account?.model||this.assistant.ollama.model,generation:account?{}:{...this.assistant.ollama.generationOptions},status:'planned',created:now(),updated:now(),steps:[],current:0,operations:[],calls:0,activeMs:0,error:null};
+      const w={id:reservedId||randomUUID(),...followUp?{followUp}:{},...plannerTask?{plannerTask}:{},version:40,engine,...account?{chatgptClientId:account.clientId,chatgptSubjectHash:sha(account.subject)}:{},routineContinuation,revision:1,directives:[],planHistory:[],conversation,goal:goal.trim(),scope,skills:snapshots,requirements:outputRequirements,...copyBeforeEdit?{copyBeforeEdit}:{},...project?{project}:{},...priorTask?{handoff:priorTask}:{},...reviewedPlan?{planReviewRequired:true,planApprovedRevision:null}:{},model:account?.model||this.assistant.ollama.model,generation:account?{}:{...this.assistant.ollama.generationOptions},status:'planned',created:now(),updated:now(),steps:[],current:0,operations:[],calls:0,activeMs:0,error:null};
       validateRoutineContinuation(routineContinuation,w);
       await beforeSave?.();await this.save(w);if(!this.launch(w)){w.status='queued';await this.save(w);}return w;
     }finally{this.creating=false;}

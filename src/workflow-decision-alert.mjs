@@ -18,6 +18,38 @@ export function decisionNumberAlerts(comparisons){
  return [...groups.values()].filter(group=>group.below.size&&group.above.size).slice(0,3).map(group=>({limit:group.limit,below:[...group.below.values()].slice(0,3),above:[...group.above.values()].slice(0,3),notice:'Recorded numbers fall on both sides of this limit. Check units, periods, which option each value describes, and whether a disputed value is current before accepting a decision.'}));
 }
 
+// A literal premise check for the first two observations in each limit cue.
+// An identifier is only an identifier, not proof that two prices describe the
+// same current offer. Missing or ambiguous source text stays unresolved.
+const identifierPattern=/\b(?:offer|sku|plan|option)\s*(?:id|code)?\s*[:#-]?\s*([a-z][a-z0-9_-]*\d[a-z0-9_-]*)\b/gi;
+const units=[
+ {pattern:/^(credits?)\s*(?:per\s+|\/\s*)(month|year)\b/i,kind:(_,unit,period)=>`credit/${period.toLowerCase()}`},
+ {pattern:/^(kilomet(?:er|re)s?|km|miles?)\b/i,kind:(_,unit)=>/^(?:mile)/i.test(unit)?'mile':'km'}
+];
+const observation=(item,comparisons)=>{
+ const values=new Map();
+ for(const c of comparisons||[])for(const v of [c?.left,c?.right])if(v?.source===item?.source&&v.value===item?.value&&typeof v.id==='string')values.set(v.id,v);
+ if(values.size!==1)return null;
+ const v=[...values.values()][0],excerpt=typeof v.excerpt==='string'?v.excerpt:'';
+ const numbers=[...excerpt.matchAll(/(?<![\p{L}\p{N}_.,+\-])[-+]?\d{1,12}(?:\.\d{1,6})?(?![\p{L}\p{N}_,+\-]|\.\d)/gu)].filter(m=>m[0]===v.value);
+ const following=numbers.length===1?excerpt.slice(numbers[0].index+v.value.length).trimStart():'';
+ const unitMatches=units.flatMap(u=>{const m=u.pattern.exec(following);return m?[{literal:m[0],kind:u.kind(...m)}]:[];});
+ const ids=[...excerpt.matchAll(identifierPattern)].map(m=>m[1]);
+ const identifiers=[...new Set(ids.map(id=>id.toLowerCase()))];
+ return {id:v.id,value:v.value,source:v.source,sourceRevision:v.sourceRevision||'',line:v.line||null,excerpt,unit:unitMatches.length===1?unitMatches[0]:null,identifier:identifiers.length===1?ids[0]:null};
+};
+export function decisionPremises(numberAlerts,comparisons){
+ return (numberAlerts||[]).slice(0,3).map(alert=>{
+  const below=observation(alert?.below?.[0],comparisons),above=observation(alert?.above?.[0],comparisons);
+  let status='unresolved';
+  if(below?.unit&&above?.unit){
+   if(below.unit.kind!==above.unit.kind)status='incompatible_units_or_periods';
+   else if(below.identifier&&above.identifier)status=below.identifier.toLowerCase()===above.identifier.toLowerCase()?'shared_identifier':'different_identifiers';
+  }
+  return {limit:alert?.limit||null,below,above,status};
+ });
+}
+
 // Focus the human review on exact authored claim text when a limit cue exists.
 // These words find possible choices; they do not classify whether one is sound.
 const decisionWords=/\b(?:recommend(?:s|ation|ed)?|choos(?:e|ing)|select(?:ed|ion)?|pick|prefer|best|should|defer|delay|wait)\b/i;

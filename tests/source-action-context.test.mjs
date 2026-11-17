@@ -28,3 +28,12 @@ test('a recorded limit straddle and exact decision wording stay visible with esc
  assert.match(html,/whether these values describe the same option/);assert.match(html,/data-decision-wording/);assert.match(html,/claim 11/);
  assert.match(html,/Decision: Cedar at 65 &lt;strong&gt;meets&lt;\/strong&gt;/);assert.match(html,/Claim review limits:/);assert.match(html,/If the catalog price is current &lt;img/);assert.doesNotMatch(html,/<img|<strong>meets/);
 });
+
+test('premise evidence is a compact escaped disclosure with an unresolved default',()=>{
+ const html=sourceActionContextHTML({goal:'Compare offers',comparisons:[],decisionPremises:[{limit:{value:'70'},status:'shared_identifier',below:{value:'65',source:'/work/catalog.md',line:2,unit:{literal:'credits per month'},identifier:'CB-17',excerpt:'Offer CB-17 costs 65 credits per month. <img src=x>'},above:{value:'85',source:'/work/quote.md',line:3,unit:{literal:'credits per month'},identifier:'CB-17',excerpt:'Offer CB-17 costs 85 credits per month.'}},{limit:{value:'10'},status:'unresolved',below:null,above:null}]},escape);
+ assert.match(html,/<details data-decision-premise><summary>Shared written identifier/);
+ assert.match(html,/<summary>Premise unresolved · limit 10/);
+ assert.match(html,/Exact source observation unavailable/);
+ assert.match(html,/&lt;img src=x&gt;/);
+ assert.doesNotMatch(html,/<img/);
+});

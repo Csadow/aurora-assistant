@@ -5,7 +5,7 @@ chat, an editable Markdown memory vault, daily planning, and reviewed actions. A
 local Ollama model can handle chat and tools; optional cloud connections require
 separate setup and an explicit preview before information is sent.
 
-This repository is a source snapshot of desktop **1.170.0**. It does not contain
+This repository is a source snapshot of desktop **1.171.0**. It does not contain
 personal notes, conversations, credentials, model weights, development artifacts,
 or the original machine's Git history. The software is still being developed for
 a single trusted desktop user. It has not been prepared as a general installer.
@@ -113,6 +113,13 @@ compare the proposal with disputed source values without searching a long note.
 The selection is a review aid, not a correctness verdict; older pending
 approvals keep their original format. Other phrasing can be missed, so the
 complete proposed note remains part of the review.
+
+The 1.171.0 update adds a compact premise disclosure to new sourced-file
+approvals when recorded numbers straddle a named limit. It shows the exact
+source excerpts and written offer IDs, units, or periods when unambiguous;
+missing evidence stays unresolved. These literal clues do not establish which
+price is current or whether a recommendation is sound. Older pending reviews
+keep their existing approval context.
 
 ## Run the local web app
 

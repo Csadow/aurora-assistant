@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {decisionNumberAlerts,decisionWording} from '../src/workflow-decision-alert.mjs';
+import {decisionNumberAlerts,decisionWording,decisionPremises} from '../src/workflow-decision-alert.mjs';
 
 const limit={id:'L',value:'70',source:'/work/requirements.md',excerpt:'The monthly budget ceiling is 70 credits.'};
 const quote={id:'Q',value:'85',source:'/work/cedar-quote.md',excerpt:'Cedar costs 85 credits per month.'};
@@ -50,4 +50,39 @@ test('the cue and wording also cover a non-price route limit without deciding wh
  assert.equal(alerts.length,1);assert.equal(alerts[0].limit.value,'10');
  const choice={kind:'inference',text:'Choose North at the 8 km map distance.',limits:'The 12 km estimate is disputed.'};
  assert.deepEqual(decisionWording({claims:[choice]},alerts),[{number:1,text:choice.text,limits:choice.limits}]);
+});
+
+test('premise evidence records only literal IDs and units from exact source observations',()=>{
+ const limit={id:'L2',value:'70',source:'/work/limit.md',sourceRevision:'rev-l',line:1,excerpt:'Budget limit 70 credits per month.'};
+ const above={id:'A2',value:'85',source:'/work/quote.md',sourceRevision:'rev-a',line:3,excerpt:'Offer CB-17 costs 85 credits per month.'};
+ const below={id:'B2',value:'65',source:'/work/catalog.md',sourceRevision:'rev-b',line:2,excerpt:'Offer CB-17 costs 65 credits per month.'};
+ const comparisons=[compare(above,limit,'>'),compare(below,limit,'<')];
+ const [premise]=decisionPremises(decisionNumberAlerts(comparisons),comparisons);
+ assert.equal(premise.status,'shared_identifier');
+ assert.deepEqual([premise.below.identifier,premise.above.identifier],['CB-17','CB-17']);
+ assert.equal(premise.below.unit.kind,'credit/month');
+ assert.equal(premise.below.sourceRevision,'rev-b');
+ assert.equal(premise.above.line,3);
+ assert.equal(decisionPremises(decisionNumberAlerts([compare({...above,excerpt:'SKU CP-2 costs 85 credits per month.'},limit,'>'),compare(below,limit,'<')]),[compare({...above,excerpt:'SKU CP-2 costs 85 credits per month.'},limit,'>'),compare(below,limit,'<')])[0].status,'different_identifiers');
+});
+
+test('incompatible units and missing identifiers stay review clues rather than equivalence verdicts',()=>{
+ const walking={id:'WL',value:'10',source:'/work/limit.md',excerpt:'Walking limit 10 km.'};
+ const miles={id:'MI',value:'12',source:'/work/route-a.md',excerpt:'Option R-2 is 12 miles.'};
+ const km={id:'KM',value:'8',source:'/work/route-b.md',excerpt:'Option R-2 is 8 km.'};
+ const route=[compare(miles,walking,'>'),compare(km,walking,'<')];
+ assert.equal(decisionPremises(decisionNumberAlerts(route),route)[0].status,'incompatible_units_or_periods');
+ const cedar=[compare(quote,limit,'>'),compare(catalog,limit,'<')];
+ assert.equal(decisionPremises(decisionNumberAlerts(cedar),cedar)[0].status,'unresolved');
+ const ambiguous=[compare({...quote,excerpt:'SKU CB-1 or SKU CB-2 costs 85 credits per month.'},limit,'>'),compare(catalog,limit,'<')];
+ assert.equal(decisionPremises(decisionNumberAlerts(ambiguous),ambiguous)[0].status,'unresolved');
+});
+
+test('ambiguous numeric provenance cannot become a resolved premise',()=>{
+ const comparisons=[compare(quote,limit,'>'),compare(catalog,limit,'<'),compare({...catalog,id:'C2'},limit,'<')];
+ const [premise]=decisionPremises(decisionNumberAlerts(comparisons),comparisons);
+ assert.equal(premise.status,'unresolved');assert.equal(premise.below,null);
+ assert.deepEqual(decisionPremises([],[]),[]);
+ const [missing]=decisionPremises(decisionNumberAlerts([compare(quote,limit,'>'),compare(catalog,limit,'<')]),[]);
+ assert.equal(missing.status,'unresolved');assert.equal(missing.above,null);
 });
